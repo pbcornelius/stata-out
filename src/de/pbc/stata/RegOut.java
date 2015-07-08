@@ -8,8 +8,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -73,7 +77,10 @@ public class RegOut implements Plugin {
 		singlePage = args.contains("s") || args.contains("singlepage");
 		quietly = args.contains("q") || args.contains("quietly");
 		
-		terms = Arrays.stream(Matrix.getMatrixColNames("e(b)")).map(Term::create).collect(Collectors.toList());
+		String[] varNames = Matrix.getMatrixColNames("e(b)");
+		terms = new ArrayList<>(varNames.length);
+		for (int i = 0; i < varNames.length; i++)
+			terms.add(Term.create(i, varNames[i]));
 		table = StataUtils.getMatrix("r(table)");
 		
 		Path path = args.stream()
@@ -205,16 +212,24 @@ public class RegOut implements Plugin {
 		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
 			c.setCellValue("Variables");
 		
+		Map<String, Integer> rows = new HashMap<>();
+		for (int row = 1; row <= sh.getLastRowNum(); row++) {
+			r = sh.getRow(row);
+			c = r.getCell(0);
+			if (c.getCellType() != Cell.CELL_TYPE_BLANK)
+				rows.put(c.getStringCellValue(), row);
+		}
+		
 		for (int col = 1; col < 21; col++) { // TODO no hard values
 			c = r.getCell(col);
 			if (c.getCellType() == Cell.CELL_TYPE_BLANK) {
-				singlePageFill(sh, col);
+				singlePageFill(sh, col, rows);
 				break;
 			}
 		}
 	}
 	
-	private void singlePageFill(XSSFSheet sh, int col) {
+	private void singlePageFill(XSSFSheet sh, int col, Map<String, Integer> rows) {
 		CellStyle cs0d = wb.createCellStyle();
 		cs0d.setDataFormat(wb.createDataFormat().getFormat("#,##0"));
 		
@@ -229,78 +244,86 @@ public class RegOut implements Plugin {
 		
 		int row = 0;
 		XSSFRow r = sh.getRow(row);
-		r.getCell(col).setCellValue(Macro.getLocal("e_depvar"));
+		XSSFCell c = r.getCell(col);
+		c.setCellValue(Macro.getLocal("e_depvar"));
 		
-		for (int i = 0; i < terms.size(); i++) { // TODO wait with constant until the end!
+		Iterator<Term> termsItr = terms.iterator();
+		while (termsItr.hasNext()) {
+			Term term = termsItr.next();
+			
+			if (rows.containsKey(term.getLabel())) {
+				termsItr.remove();
+				
+				int termRow = rows.get(term.getLabel());
+				if (!term.getName().equals("_cons"))
+					row = Math.max(termRow, row);
+				r = sh.getRow(termRow);
+				
+				c = r.getCell(col);
+				c.setCellValue(BigDecimal.valueOf(table[0][term.getIndex()]).setScale(2, RoundingMode.HALF_UP)
+						+ sigLevels.apply(table[3][term.getIndex()]));
+				c.setCellStyle(csText);
+			}
+		}
+		
+		for (Term term : terms) {
 			row++;
 			r = sh.getRow(row) != null ? sh.getRow(row) : sh.createRow(row);
 			
-			XSSFCell c = r.getCell(0);
+			c = r.getCell(0);
 			if (c.getCellType() == Cell.CELL_TYPE_BLANK) {
-				c.setCellValue(terms.get(i).getLabel());
-			} else if (!c.getStringCellValue().equals(terms.get(i).getLabel())) {
-				sh.shiftRows(row, row, 1);
+				c.setCellValue(term.getLabel());
+			} else {
+				int tmpRow = row;
+				rows.replaceAll((s, i) -> i >= tmpRow ? i + 1 : i);
+				sh.shiftRows(row, sh.getLastRowNum(), 1);
 				r = sh.createRow(row);
 				c = r.getCell(0);
-				c.setCellValue(terms.get(i).getLabel());
+				c.setCellValue(term.getLabel());
 			}
 			
-			r.createCell(col).setCellValue(
-					BigDecimal.valueOf(table[0][i]).setScale(2, RoundingMode.HALF_UP) + sigLevels.apply(table[3][i]));
-			r.getCell(col).setCellStyle(csText);
+			c = r.getCell(col);
+			c.setCellValue(BigDecimal.valueOf(table[0][term.getIndex()]).setScale(2, RoundingMode.HALF_UP)
+					+ sigLevels.apply(table[3][term.getIndex()]));
+			c.setCellStyle(csText);
 		}
 		
-		row++;
-		for (int tmpRow = row; tmpRow < 50; tmpRow++) { // TODO no hard values
-			r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
-			
-			if (r.getCell(0).getCellType() == Cell.CELL_TYPE_BLANK)
-				r.getCell(0).setCellValue("N");
-			else if (!r.getCell(0).getStringCellValue().equals("N"))
-				continue;
-			
-			r.createCell(col).setCellValue(Scalar.getValue("es_N"));
-			r.getCell(col).setCellStyle(cs0d);
-			
-			row = tmpRow;
-			break;
-		}
+		row = sh.getLastRowNum();
 		
-		row++;
-		for (int tmpRow = row; tmpRow < 50; tmpRow++) { // TODO no hard values
-			r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
-			
-			if (r.getCell(0).getCellType() == Cell.CELL_TYPE_BLANK)
-				r.getCell(0).setCellValue("Groups");
-			else if (!r.getCell(0).getStringCellValue().equals("Groups"))
-				continue;
-			
-			r.createCell(col).setCellValue(Scalar.getValue("es_N_g"));
-			r.getCell(col).setCellStyle(cs0d);
-			
-			row = tmpRow;
-			break;
-		}
+		int tmpRow = rows.containsKey("N") ? rows.get("N") : ++row;
+		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
+		c = r.getCell(0);
+		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
+			c.setCellValue("N");
+		c = r.getCell(col);
+		c.setCellValue(Scalar.getValue("es_N"));
+		c.setCellStyle(cs0d);
 		
-		row++;
-		for (int tmpRow = row; tmpRow < 50; tmpRow++) { // TODO no hard values
-			r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
-			
-			if (r.getCell(0).getCellType() == Cell.CELL_TYPE_BLANK)
-				r.getCell(0).setCellValue("F-Stat");
-			else if (!r.getCell(0).getStringCellValue().equals("F-Stat"))
-				continue;
-			
-			r.createCell(col).setCellValue(Scalar.getValue("es_F"));
-			r.getCell(col).setCellStyle(cs2d);
-			
-			r = sh.getRow(++tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
-			r.createCell(col).setCellValue(
-					LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-			
-			row = tmpRow;
-			break;
-		}
+		tmpRow = rows.containsKey("Groups") ? rows.get("Groups") : ++row;
+		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
+		c = r.getCell(0);
+		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
+			c.setCellValue("Groups");
+		c = r.getCell(col);
+		c.setCellValue(Scalar.getValue("es_N_g"));
+		c.setCellStyle(cs0d);
+		
+		tmpRow = rows.containsKey("F-Stat") ? rows.get("F-Stat") : ++row;
+		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
+		c = r.getCell(0);
+		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
+			c.setCellValue("F-Stat");
+		c = r.getCell(col);
+		c.setCellValue(Scalar.getValue("es_F"));
+		c.setCellStyle(cs2d);
+		
+		tmpRow = rows.containsKey("created") ? rows.get("created") : ++row;
+		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
+		c = r.getCell(0);
+		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
+			c.setCellValue("created");
+		c = r.getCell(col);
+		c.setCellValue(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
 		
 		sh.autoSizeColumn(0);
 		sh.autoSizeColumn(col);

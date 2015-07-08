@@ -8,6 +8,8 @@ public interface Term {
 	
 	// PUBLIC ------------------------------------------------------- //
 	
+	public int getIndex();
+	
 	public String getName();
 	
 	public String getLabel();
@@ -18,8 +20,8 @@ public interface Term {
 	
 	// FACTORY ------------------------------------------------------ //
 	
-	public static Term create(String name) {
-		return new TermImpl(name);
+	public static Term create(int index, String name) {
+		return new TermImpl(index, name);
 	}
 	
 	// INNER CLASSES ------------------------------------------------ //
@@ -28,18 +30,26 @@ public interface Term {
 		
 		// VARIABLES ---------------------------------------------------- //
 		
+		private int index;
+		
 		private String name;
 		
 		private List<Variable> vars;
 		
 		// CONSTRUCTOR -------------------------------------------------- //
 		
-		public TermImpl(String name) {
+		public TermImpl(int index, String name) {
+			this.index = index;
 			this.name = name.trim();
 			vars = Arrays.stream(this.name.split("#")).map(Variable::create).collect(Collectors.toList());
 		}
 		
 		// PUBLIC ------------------------------------------------------- //
+		
+		@Override
+		public int getIndex() {
+			return index;
+		}
 		
 		@Override
 		public String getName() {
