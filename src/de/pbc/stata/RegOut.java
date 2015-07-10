@@ -245,7 +245,9 @@ public class RegOut implements Plugin {
 		int row = 0;
 		XSSFRow r = sh.getRow(row);
 		XSSFCell c = r.getCell(col);
-		c.setCellValue(Macro.getLocal("e_depvar"));
+		
+		Variable dv = Variable.create(Macro.getLocal("e_depvar"));
+		c.setCellValue(dv.getLabel());
 		
 		Iterator<Term> termsItr = terms.iterator();
 		while (termsItr.hasNext()) {
@@ -261,8 +263,11 @@ public class RegOut implements Plugin {
 				
 				c = r.getCell(col);
 				c.setCellValue(BigDecimal.valueOf(table[0][term.getIndex()]).setScale(2, RoundingMode.HALF_UP)
-						+ sigLevels.apply(table[3][term.getIndex()]));
+						+ sigLevels.apply(table[3][term.getIndex()]) + " ("
+						+ BigDecimal.valueOf(table[1][term.getIndex()]).setScale(2, RoundingMode.HALF_UP) + ")");
 				c.setCellStyle(csText);
+			} else if (term.isBase() && rows.containsKey("base " + term.getLabel())) {
+				termsItr.remove();
 			}
 		}
 		
@@ -272,25 +277,53 @@ public class RegOut implements Plugin {
 			
 			c = r.getCell(0);
 			if (c.getCellType() == Cell.CELL_TYPE_BLANK) {
-				c.setCellValue(term.getLabel());
+				if (term.isBase())
+					c.setCellValue("base " + term.getLabel());
+				else
+					c.setCellValue(term.getLabel());
 			} else {
 				int tmpRow = row;
 				rows.replaceAll((s, i) -> i >= tmpRow ? i + 1 : i);
 				sh.shiftRows(row, sh.getLastRowNum(), 1);
 				r = sh.createRow(row);
 				c = r.getCell(0);
-				c.setCellValue(term.getLabel());
+				if (term.isBase())
+					c.setCellValue("base " + term.getLabel());
+				else
+					c.setCellValue(term.getLabel());
 			}
 			
-			c = r.getCell(col);
-			c.setCellValue(BigDecimal.valueOf(table[0][term.getIndex()]).setScale(2, RoundingMode.HALF_UP)
-					+ sigLevels.apply(table[3][term.getIndex()]));
-			c.setCellStyle(csText);
+			if (!term.isBase()) {
+				c = r.getCell(col);
+				c.setCellValue(BigDecimal.valueOf(table[0][term.getIndex()]).setScale(2, RoundingMode.HALF_UP)
+						+ sigLevels.apply(table[3][term.getIndex()]) + " ("
+						+ BigDecimal.valueOf(table[1][term.getIndex()]).setScale(2, RoundingMode.HALF_UP) + ")");
+				c.setCellStyle(csText);
+			}
 		}
 		
 		row = sh.getLastRowNum();
+		int tmpRow;
 		
-		int tmpRow = rows.containsKey("N") ? rows.get("N") : ++row;
+		tmpRow = rows.containsKey("F-Stat") ? rows.get("F-Stat") : ++row;
+		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
+		c = r.getCell(0);
+		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
+			c.setCellValue("F-Stat");
+		c = r.getCell(col);
+		c.setCellValue(Scalar.getValue("es_F"));
+		c.setCellStyle(cs2d);
+		
+		tmpRow = rows.containsKey("R²") ? rows.get("R²") : ++row;
+		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
+		c = r.getCell(0);
+		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
+			c.setCellValue("R²");
+		c = r.getCell(col);
+		c.setCellValue(Scalar.getValue("es_r2"));
+		c.setCellStyle(cs2d);
+		
+		tmpRow = rows.containsKey("N") ? rows.get("N") : ++row;
 		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
 		c = r.getCell(0);
 		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
@@ -307,15 +340,6 @@ public class RegOut implements Plugin {
 		c = r.getCell(col);
 		c.setCellValue(Scalar.getValue("es_N_g"));
 		c.setCellStyle(cs0d);
-		
-		tmpRow = rows.containsKey("F-Stat") ? rows.get("F-Stat") : ++row;
-		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
-		c = r.getCell(0);
-		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
-			c.setCellValue("F-Stat");
-		c = r.getCell(col);
-		c.setCellValue(Scalar.getValue("es_F"));
-		c.setCellStyle(cs2d);
 		
 		tmpRow = rows.containsKey("created") ? rows.get("created") : ++row;
 		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
