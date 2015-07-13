@@ -122,9 +122,8 @@ public class RegOut implements Plugin {
 	}
 	
 	private void multiPage() {
-		XSSFSheet sh = wb.createSheet(iterateSheetName(
-				WorkbookUtil.createSafeSheetName(Macro.getLocal("e_depvar").replaceAll("[\\s\\v]+", " ")),
-				0));
+		XSSFSheet sh = wb.createSheet(iterateSheetName(WorkbookUtil.createSafeSheetName(Macro.getLocal("e_depvar")
+				.replaceAll("[\\s\\v]+", " ")), 0));
 		
 		wb.setActiveSheet(wb.getSheetIndex(sh));
 		wb.setSelectedTab(wb.getSheetIndex(sh));
@@ -156,9 +155,8 @@ public class RegOut implements Plugin {
 				r.createCell(0).setCellValue("base " + terms.get(i).getLabel());
 			} else {
 				r.createCell(0).setCellValue(terms.get(i).getLabel());
-				r.createCell(1).setCellValue(
-						BigDecimal.valueOf(table[0][i]).setScale(2, RoundingMode.HALF_UP)
-								+ sigLevels.apply(table[3][i]));
+				r.createCell(1).setCellValue(BigDecimal.valueOf(table[0][i]).setScale(2, RoundingMode.HALF_UP)
+						+ sigLevels.apply(table[3][i]));
 				r.getCell(1).setCellStyle(csText);
 				r.createCell(2).setCellValue(table[0][i]);
 				r.getCell(2).setCellStyle(cs2d);
@@ -200,8 +198,7 @@ public class RegOut implements Plugin {
 	private void singlePage() {
 		wb.setMissingCellPolicy(Row.CREATE_NULL_AS_BLANK);
 		
-		XSSFSheet sh = Optional.ofNullable(wb.getSheet(WorkbookUtil.createSafeSheetName(Macro.getLocal("e_depvar"))))
-				.orElseGet(() -> wb.createSheet(WorkbookUtil.createSafeSheetName(Macro.getLocal("e_depvar"))));
+		XSSFSheet sh = Optional.ofNullable(wb.getSheet("Sheet0")).orElseGet(() -> wb.createSheet());
 		
 		wb.setActiveSheet(wb.getSheetIndex(sh));
 		wb.setSelectedTab(wb.getSheetIndex(sh));
