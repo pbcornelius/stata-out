@@ -40,6 +40,10 @@ public class RegOut implements Plugin {
 	
 	private boolean merge, singlePage, quietly;
 	
+	private String cmd;
+	
+	private RegPar regPar;
+	
 	private List<Term> terms;
 	
 	private double[][] table;
@@ -58,11 +62,16 @@ public class RegOut implements Plugin {
 	
 	@Override
 	public int execute(String[] args) throws Exception {
+		if (Macro.getLocal("e_cmd") == null)
+			throw new Exception("no estimation stored");
+			
 		List<String> argsList = Arrays.asList(args).stream().map((s) -> s.toLowerCase()).collect(Collectors.toList());
+		
+		cmd = Macro.getLocal("e_cmd");
+		regPar = RegPars.byCmd(cmd);
 		
 		if (argsList.contains("e") || argsList.contains("excel"))
 			return excelOut(argsList);
-		
 		else
 			throw new Exception("no output specified");
 	}
@@ -70,9 +79,6 @@ public class RegOut implements Plugin {
 	// PRIVATE ------------------------------------------------------ //
 	
 	private int excelOut(List<String> args) throws Exception {
-		if (Macro.getLocal("e_cmd") == null)
-			throw new Exception("no estimation stored");
-		
 		merge = args.contains("m") || args.contains("merge");
 		singlePage = args.contains("s") || args.contains("singlepage");
 		quietly = args.contains("q") || args.contains("quietly");
@@ -88,7 +94,7 @@ public class RegOut implements Plugin {
 				.findFirst()
 				.map((a) -> Paths.get(a.substring("path=".length())))
 				.orElse(Paths.get("regOut.xlsx"));
-		
+				
 		try (XSSFWorkbook wb = merge && Files.exists(path)
 				? new XSSFWorkbook(Files.newInputStream(path))
 				: new XSSFWorkbook()) {
@@ -98,14 +104,14 @@ public class RegOut implements Plugin {
 				singlePage();
 			else
 				multiPage();
-			
+				
 			try (FileOutputStream out = new FileOutputStream(path.toFile())) {
 				wb.write(out);
 			}
 			
 			if (!quietly)
 				SFIToolkit.display("{browse \"" + path + "\":Open " + path + "}");
-			
+				
 			return 0;
 		} catch (Exception e) {
 			SFIToolkit.error(SFIToolkit.stackTraceToString(e));
@@ -122,9 +128,9 @@ public class RegOut implements Plugin {
 	}
 	
 	private void multiPage() {
-		XSSFSheet sh = wb.createSheet(iterateSheetName(WorkbookUtil.createSafeSheetName(Macro.getLocal("e_depvar")
-				.replaceAll("[\\s\\v]+", " ")), 0));
-		
+		XSSFSheet sh = wb.createSheet(iterateSheetName(
+				WorkbookUtil.createSafeSheetName(Macro.getLocal("e_depvar").replaceAll("[\\s\\v]+", " ")), 0));
+				
 		wb.setActiveSheet(wb.getSheetIndex(sh));
 		wb.setSelectedTab(wb.getSheetIndex(sh));
 		
@@ -178,14 +184,16 @@ public class RegOut implements Plugin {
 		r.createCell(1).setCellValue(Scalar.getValue("es_N"));
 		r.getCell(1).setCellStyle(cs0d);
 		
-		r = sh.createRow(terms.size() + 2);
-		r.createCell(0).setCellValue("Groups");
-		r.createCell(1).setCellValue(Scalar.getValue("es_N_g"));
-		r.getCell(1).setCellStyle(cs0d);
+		if (regPar.hasGroups()) {
+			r = sh.createRow(terms.size() + 2);
+			r.createCell(0).setCellValue("Groups");
+			r.createCell(1).setCellValue(Scalar.getValue("es_N_g"));
+			r.getCell(1).setCellStyle(cs0d);
+		}
 		
 		r = sh.createRow(terms.size() + 3);
-		r.createCell(0).setCellValue("F-Stat");
-		r.createCell(1).setCellValue(Scalar.getValue("es_F"));
+		r.createCell(0).setCellValue(regPar.getStatName());
+		r.createCell(1).setCellValue(Scalar.getValue(regPar.getStatId()));
 		r.getCell(1).setCellStyle(cs2d);
 		
 		r = sh.createRow(terms.size() + 4);
@@ -193,6 +201,12 @@ public class RegOut implements Plugin {
 		
 		sh.autoSizeColumn(0);
 		sh.autoSizeColumn(1);
+		sh.autoSizeColumn(2);
+		sh.autoSizeColumn(3);
+		sh.autoSizeColumn(4);
+		sh.autoSizeColumn(5);
+		sh.autoSizeColumn(6);
+		sh.autoSizeColumn(7);
 	}
 	
 	private void singlePage() {
@@ -208,7 +222,7 @@ public class RegOut implements Plugin {
 		XSSFCell c = r.getCell(0);
 		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
 			c.setCellValue("Variables");
-		
+			
 		Map<String, Integer> rows = new HashMap<>();
 		for (int row = 1; row <= sh.getLastRowNum(); row++) {
 			r = sh.getRow(row);
@@ -217,6 +231,7 @@ public class RegOut implements Plugin {
 				rows.put(c.getStringCellValue(), row);
 		}
 		
+		r = sh.getRow(0);
 		for (int col = 1; col < 21; col++) { // TODO no hard values
 			c = r.getCell(col);
 			if (c.getCellType() == Cell.CELL_TYPE_BLANK) {
@@ -302,13 +317,13 @@ public class RegOut implements Plugin {
 		row = sh.getLastRowNum();
 		int tmpRow;
 		
-		tmpRow = rows.containsKey("F-Stat") ? rows.get("F-Stat") : ++row;
+		tmpRow = rows.containsKey(regPar.getStatName()) ? rows.get(regPar.getStatName()) : ++row;
 		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
 		c = r.getCell(0);
 		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
-			c.setCellValue("F-Stat");
+			c.setCellValue(regPar.getStatName());
 		c = r.getCell(col);
-		c.setCellValue(Scalar.getValue("es_F"));
+		c.setCellValue(Scalar.getValue(regPar.getStatId()));
 		c.setCellStyle(cs2d);
 		
 		tmpRow = rows.containsKey("R²") ? rows.get("R²") : ++row;
@@ -329,14 +344,16 @@ public class RegOut implements Plugin {
 		c.setCellValue(Scalar.getValue("es_N"));
 		c.setCellStyle(cs0d);
 		
-		tmpRow = rows.containsKey("Groups") ? rows.get("Groups") : ++row;
-		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
-		c = r.getCell(0);
-		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
-			c.setCellValue("Groups");
-		c = r.getCell(col);
-		c.setCellValue(Scalar.getValue("es_N_g"));
-		c.setCellStyle(cs0d);
+		if (regPar.hasGroups()) {
+			tmpRow = rows.containsKey("Groups") ? rows.get("Groups") : ++row;
+			r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
+			c = r.getCell(0);
+			if (c.getCellType() == Cell.CELL_TYPE_BLANK)
+				c.setCellValue("Groups");
+			c = r.getCell(col);
+			c.setCellValue(Scalar.getValue("es_N_g"));
+			c.setCellStyle(cs0d);
+		}
 		
 		tmpRow = rows.containsKey("created") ? rows.get("created") : ++row;
 		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
