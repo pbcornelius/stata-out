@@ -12,6 +12,10 @@ public class RegPars {
 				return logit();
 			case "ivregress":
 				return twoSls();
+			case "xtreg":
+				return olsFe();
+			case "xtivreg":
+				return olsFe();
 			default:
 				return ols();
 		}
