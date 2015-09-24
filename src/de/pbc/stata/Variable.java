@@ -65,7 +65,7 @@ public interface Variable {
 		}
 		
 		public boolean hasIndex() {
-			return getIndex() < Data.getVarCount();
+			return getIndex() <= Data.getVarCount();
 		}
 		
 		@Override
