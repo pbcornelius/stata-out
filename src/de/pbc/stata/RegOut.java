@@ -161,21 +161,26 @@ public class RegOut implements Plugin {
 				r.createCell(0).setCellValue("base " + terms.get(i).getLabel());
 			} else {
 				r.createCell(0).setCellValue(terms.get(i).getLabel());
-				r.createCell(1).setCellValue(BigDecimal.valueOf(table[0][i]).setScale(2, RoundingMode.HALF_UP)
-						+ sigLevels.apply(table[3][i]));
-				r.getCell(1).setCellStyle(csText);
-				r.createCell(2).setCellValue(table[0][i]);
-				r.getCell(2).setCellStyle(cs2d);
-				r.createCell(3).setCellValue(table[1][i]);
-				r.getCell(3).setCellStyle(cs2d);
-				r.createCell(4).setCellValue(table[2][i]);
-				r.getCell(4).setCellStyle(cs2d);
-				r.createCell(5).setCellValue(table[3][i]);
-				r.getCell(5).setCellStyle(cs3d);
-				r.createCell(6).setCellValue(table[4][i]);
-				r.getCell(6).setCellStyle(cs2d);
-				r.createCell(7).setCellValue(table[5][i]);
-				r.getCell(7).setCellStyle(cs2d);
+				if (!terms.get(i).isOmitted()) {
+					r.createCell(1).setCellValue(BigDecimal.valueOf(table[0][i]).setScale(2, RoundingMode.HALF_UP)
+							+ sigLevels.apply(table[3][i]));
+					r.getCell(1).setCellStyle(csText);
+					r.createCell(2).setCellValue(table[0][i]);
+					r.getCell(2).setCellStyle(cs2d);
+					r.createCell(3).setCellValue(table[1][i]);
+					r.getCell(3).setCellStyle(cs2d);
+					r.createCell(4).setCellValue(table[2][i]);
+					r.getCell(4).setCellStyle(cs2d);
+					r.createCell(5).setCellValue(table[3][i]);
+					r.getCell(5).setCellStyle(cs3d);
+					r.createCell(6).setCellValue(table[4][i]);
+					r.getCell(6).setCellStyle(cs2d);
+					r.createCell(7).setCellValue(table[5][i]);
+					r.getCell(7).setCellStyle(cs2d);
+				} else {
+					r.createCell(1).setCellValue("0 (omitted)");
+					r.getCell(1).setCellStyle(csText);
+				}
 			}
 		}
 		
@@ -274,10 +279,15 @@ public class RegOut implements Plugin {
 				r = sh.getRow(termRow);
 				
 				c = r.getCell(col);
-				c.setCellValue(BigDecimal.valueOf(table[0][term.getIndex()]).setScale(2, RoundingMode.HALF_UP)
-						+ sigLevels.apply(table[3][term.getIndex()]) + " ("
-						+ BigDecimal.valueOf(table[1][term.getIndex()]).setScale(2, RoundingMode.HALF_UP) + ")");
-				c.setCellStyle(csText);
+				if (term.isOmitted()) {
+					c.setCellValue("0 (omitted)");
+					c.setCellStyle(csText);
+				} else {
+					c.setCellValue(BigDecimal.valueOf(table[0][term.getIndex()]).setScale(2, RoundingMode.HALF_UP)
+							+ sigLevels.apply(table[3][term.getIndex()]) + " ("
+							+ BigDecimal.valueOf(table[1][term.getIndex()]).setScale(2, RoundingMode.HALF_UP) + ")");
+					c.setCellStyle(csText);
+				}
 			} else if (term.isBase() && rows.containsKey("base " + term.getLabel())) {
 				termsItr.remove();
 			}
@@ -305,7 +315,11 @@ public class RegOut implements Plugin {
 					c.setCellValue(term.getLabel());
 			}
 			
-			if (!term.isBase()) {
+			if (term.isOmitted()) {
+				c = r.getCell(col);
+				c.setCellValue("0 (omitted)");
+				c.setCellStyle(csText);
+			} else if (!term.isBase()) {
 				c = r.getCell(col);
 				c.setCellValue(BigDecimal.valueOf(table[0][term.getIndex()]).setScale(2, RoundingMode.HALF_UP)
 						+ sigLevels.apply(table[3][term.getIndex()]) + " ("

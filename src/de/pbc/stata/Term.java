@@ -16,6 +16,8 @@ public interface Term {
 	
 	public List<Variable> getVariables();
 	
+	public boolean isOmitted();
+	
 	public boolean isBase();
 	
 	// FACTORY ------------------------------------------------------ //
@@ -70,6 +72,11 @@ public interface Term {
 		@Override
 		public List<Variable> getVariables() {
 			return vars;
+		}
+		
+		@Override
+		public boolean isOmitted() {
+			return vars.stream().anyMatch((v) -> v.isOmitted());
 		}
 		
 		@Override
