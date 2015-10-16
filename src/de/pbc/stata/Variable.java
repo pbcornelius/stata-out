@@ -29,7 +29,7 @@ public interface Variable {
 	
 	static class VariableImpl implements Variable {
 		
-		private Pattern indicator = Pattern.compile("^(c?)(o?)(\\d*)(b?)\\.(.+)");
+		private Pattern indicator = Pattern.compile("^(\\d*)(c?)(o?)(b?)\\.(.+)");
 		
 		// VARIABLES ------------------------------------------------ //
 		
@@ -46,8 +46,8 @@ public interface Variable {
 		public VariableImpl(String name) {
 			Matcher m;
 			if ((m = indicator.matcher(name)).matches()) {
-				value = m.group(3).length() > 0 ? Integer.valueOf(m.group(3)) : null;
-				omitted = m.group(2).equals("o");
+				value = m.group(1).length() > 0 ? Integer.valueOf(m.group(1)) : null;
+				omitted = m.group(3).equals("o");
 				base = m.group(4).equals("b");
 				this.name = m.replaceAll("$5");
 			} else {
