@@ -1,5 +1,6 @@
 package de.pbc.stata;
 
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -16,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -34,11 +37,38 @@ import com.stata.sfi.Matrix;
 import com.stata.sfi.SFIToolkit;
 import com.stata.sfi.Scalar;
 
+/**
+ * <p>
+ * Stata Java plugin to write Stata outputs in Excel.
+ * </p>
+ * <p>
+ * Takes the following arguments:
+ * <ul>
+ * <li>{@code e/excel}: output in Excel file (required)</li>
+ * <li>{@code path}: path of output file (regOut.xlsx default)</li>
+ * <li>{@code c/copy}: create a copy of the output file, if the output file
+ * exists already</li>
+ * <li>{@code m/merge}: merge with existing Excel file, if it exist (in
+ * combination with {@code copy} the existing file is used as input)</li>
+ * <li>{@code s/singlepage}: single page output (multipage default)</li>
+ * <li>{@code q/quietly}: print file link to Stata console</li>
+ * </ul>
+ * </p>
+ * 
+ * @author Philipp Cornelius
+ * @version 1 (2017-03-06)
+ */
 public class RegOut implements Plugin {
+	
+	// CONSTANTS ----------------------------------------------------- //
+	
+	private static final Pattern FILE_NAME = Pattern.compile("(^[\\w,\\s-]+?)(?: - Copy (\\d+))?(\\.xlsx)$");
 	
 	// VARIABLES ----------------------------------------------------- //
 	
-	private boolean merge, singlePage, quietly;
+	private Path path;
+	
+	private boolean merge, singlePage, quietly, copy;
 	
 	private String cmd;
 	
@@ -64,7 +94,7 @@ public class RegOut implements Plugin {
 	public int execute(String[] args) throws Exception {
 		if (Macro.getLocal("e_cmd") == null)
 			throw new Exception("no estimation stored");
-			
+		
 		List<String> argsList = Arrays.asList(args).stream().map((s) -> s.toLowerCase()).collect(Collectors.toList());
 		
 		cmd = Macro.getLocal("e_cmd");
@@ -82,6 +112,7 @@ public class RegOut implements Plugin {
 		merge = args.contains("m") || args.contains("merge");
 		singlePage = args.contains("s") || args.contains("singlepage");
 		quietly = args.contains("q") || args.contains("quietly");
+		copy = args.contains("c") || args.contains("copy");
 		
 		String[] varNames = Matrix.getMatrixColNames("e(b)");
 		terms = new ArrayList<>(varNames.length);
@@ -89,12 +120,12 @@ public class RegOut implements Plugin {
 			terms.add(Term.create(i, varNames[i]));
 		table = StataUtils.getMatrix("r(table)");
 		
-		Path path = args.stream()
+		path = args.stream()
 				.filter((a) -> a.startsWith("path="))
 				.findFirst()
 				.map((a) -> Paths.get(a.substring("path=".length())))
 				.orElse(Paths.get("regOut.xlsx"));
-				
+		
 		try (XSSFWorkbook wb = merge && Files.exists(path)
 				? new XSSFWorkbook(Files.newInputStream(path))
 				: new XSSFWorkbook()) {
@@ -104,14 +135,18 @@ public class RegOut implements Plugin {
 				singlePage();
 			else
 				multiPage();
-				
-			try (FileOutputStream out = new FileOutputStream(path.toFile())) {
+			
+			if (copy)
+				path = iteratePath(path);
+			
+			try (FileOutputStream out = getOutputStream(path)) {
 				wb.write(out);
 			}
 			
 			if (!quietly)
-				SFIToolkit.display("{browse \"" + path + "\":Open " + path + "}");
-				
+				SFIToolkit.display("{browse \"" + path + "\":Open " + path + "}" + "\n");
+			Macro.setGlobal("filename", "path=" + path.toString());
+			
 			return 0;
 		} catch (Exception e) {
 			SFIToolkit.error(SFIToolkit.stackTraceToString(e));
@@ -128,9 +163,9 @@ public class RegOut implements Plugin {
 	}
 	
 	private void multiPage() {
-		XSSFSheet sh = wb.createSheet(iterateSheetName(
-				WorkbookUtil.createSafeSheetName(Macro.getLocal("e_depvar").replaceAll("[\\s\\v]+", " ")), 0));
-				
+		XSSFSheet sh = wb.createSheet(iterateSheetName(WorkbookUtil.createSafeSheetName(Macro.getLocal("e_depvar")
+				.replaceAll("[\\s\\v]+", " ")), 0));
+		
 		wb.setActiveSheet(wb.getSheetIndex(sh));
 		wb.setSelectedTab(wb.getSheetIndex(sh));
 		
@@ -227,7 +262,7 @@ public class RegOut implements Plugin {
 		XSSFCell c = r.getCell(0);
 		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
 			c.setCellValue("Variables");
-			
+		
 		Map<String, Integer> rows = new HashMap<>();
 		for (int row = 1; row <= sh.getLastRowNum(); row++) {
 			r = sh.getRow(row);
@@ -284,8 +319,8 @@ public class RegOut implements Plugin {
 					c.setCellStyle(csText);
 				} else {
 					c.setCellValue(BigDecimal.valueOf(table[0][term.getIndex()]).setScale(2, RoundingMode.HALF_UP)
-							+ sigLevels.apply(table[3][term.getIndex()]) + " ("
-							+ BigDecimal.valueOf(table[1][term.getIndex()]).setScale(2, RoundingMode.HALF_UP) + ")");
+							+ sigLevels.apply(table[3][term.getIndex()]) + " (" + BigDecimal.valueOf(table[1][term
+									.getIndex()]).setScale(2, RoundingMode.HALF_UP) + ")");
 					c.setCellStyle(csText);
 				}
 			} else if (term.isBase() && rows.containsKey("base " + term.getLabel())) {
@@ -322,8 +357,8 @@ public class RegOut implements Plugin {
 			} else if (!term.isBase()) {
 				c = r.getCell(col);
 				c.setCellValue(BigDecimal.valueOf(table[0][term.getIndex()]).setScale(2, RoundingMode.HALF_UP)
-						+ sigLevels.apply(table[3][term.getIndex()]) + " ("
-						+ BigDecimal.valueOf(table[1][term.getIndex()]).setScale(2, RoundingMode.HALF_UP) + ")");
+						+ sigLevels.apply(table[3][term.getIndex()]) + " (" + BigDecimal.valueOf(table[1][term
+								.getIndex()]).setScale(2, RoundingMode.HALF_UP) + ")");
 				c.setCellStyle(csText);
 			}
 		}
@@ -380,4 +415,31 @@ public class RegOut implements Plugin {
 		sh.autoSizeColumn(0);
 		sh.autoSizeColumn(col);
 	}
+	
+	private FileOutputStream getOutputStream(Path path) {
+		try {
+			return new FileOutputStream(path.toFile());
+		} catch (FileNotFoundException e) {
+			this.path = iteratePath(path);
+			return getOutputStream(this.path);
+		}
+	}
+	
+	private Path iteratePath(Path path) {
+		if (Files.exists(path)) {
+			String fileName = path.getName(path.getNameCount() - 1).toString();
+			Matcher m = FILE_NAME.matcher(fileName);
+			m.find();
+			
+			if (m.group(2) == null) {
+				return iteratePath(path.getParent().resolve(m.group(1) + " - Copy 1" + m.group(3)));
+			} else {
+				int copyNumber = Integer.valueOf(m.group(2)) + 1;
+				return iteratePath(path.getParent().resolve(m.group(1) + " - Copy " + copyNumber + m.group(3)));
+			}
+		} else {
+			return path;
+		}
+	}
+	
 }
