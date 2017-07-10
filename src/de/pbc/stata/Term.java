@@ -81,7 +81,7 @@ public interface Term {
 		
 		@Override
 		public boolean isBase() {
-			return vars.size() == 1 && vars.get(0).isBase();
+			return vars.stream().anyMatch((v) -> v.isBase());
 		}
 		
 		@Override

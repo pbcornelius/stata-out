@@ -381,7 +381,11 @@ public class RegOut implements Plugin {
 		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
 			c.setCellValue("R²");
 		c = r.getCell(col);
-		c.setCellValue(Scalar.getValue("es_r2"));
+		if (cmd.equals("logit")) {
+			c.setCellValue(Scalar.getValue("es_r2_p"));
+		} else {
+			c.setCellValue(Scalar.getValue("es_r2"));
+		}
 		c.setCellStyle(cs2d);
 		
 		tmpRow = rows.containsKey("N") ? rows.get("N") : ++row;
