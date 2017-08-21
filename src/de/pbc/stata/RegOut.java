@@ -356,9 +356,18 @@ public class RegOut implements Plugin {
 				c.setCellStyle(csText);
 			} else if (!term.isBase()) {
 				c = r.getCell(col);
-				c.setCellValue(BigDecimal.valueOf(table[0][term.getIndex()]).setScale(2, RoundingMode.HALF_UP)
-						+ sigLevels.apply(table[3][term.getIndex()]) + " (" + BigDecimal.valueOf(table[1][term
-								.getIndex()]).setScale(2, RoundingMode.HALF_UP) + ")");
+				
+				BigDecimal val = BigDecimal.valueOf(table[0][term.getIndex()]);
+				BigDecimal valRounded = val.setScale(2, RoundingMode.HALF_UP);
+				
+				if (val.signum() == -1 && valRounded.signum() != -1) {
+					c.setCellValue("-" + valRounded + sigLevels.apply(table[3][term.getIndex()]) + " (" + BigDecimal
+							.valueOf(table[1][term.getIndex()]).setScale(2, RoundingMode.HALF_UP) + ")");
+				} else {
+					c.setCellValue(valRounded + sigLevels.apply(table[3][term.getIndex()]) + " (" + BigDecimal.valueOf(
+							table[1][term.getIndex()]).setScale(2, RoundingMode.HALF_UP) + ")");
+				}
+				
 				c.setCellStyle(csText);
 			}
 		}
