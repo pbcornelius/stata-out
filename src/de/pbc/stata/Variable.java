@@ -29,7 +29,7 @@ public interface Variable {
 	
 	static class VariableImpl implements Variable {
 		
-		private Pattern indicator = Pattern.compile("^(\\d*)(c?)(o?)(b?)\\.(.+)");
+		private Pattern indicator = Pattern.compile("^(\\d*)(?:c?)(o?)(b?)(l(\\d*))?(d?)\\.(.+)");
 		
 		// VARIABLES ------------------------------------------------ //
 		
@@ -41,15 +41,26 @@ public interface Variable {
 		
 		private boolean base = false;
 		
+		private boolean lagged = false;
+		
+		private Integer lag = 1;
+		
+		private boolean delta = false;
+		
 		// CONSTRUCTOR ---------------------------------------------- //
 		
 		public VariableImpl(String name) {
+			name = name.toLowerCase();
 			Matcher m;
 			if ((m = indicator.matcher(name)).matches()) {
 				value = m.group(1).length() > 0 ? Integer.valueOf(m.group(1)) : null;
-				omitted = m.group(3).equals("o");
-				base = m.group(4).equals("b");
-				this.name = m.replaceAll("$5");
+				omitted = m.group(2).equalsIgnoreCase("o");
+				base = m.group(3).equalsIgnoreCase("b");
+				lagged = m.group(4) != null;
+				if (lagged && m.group(5).length() > 0)
+					lag = Integer.valueOf(m.group(5));
+				delta = m.group(6).equalsIgnoreCase("d");
+				this.name = m.replaceAll("$7");
 			} else {
 				this.name = name;
 			}
@@ -79,6 +90,10 @@ public interface Variable {
 					label = name;
 				if (value != null)
 					label += "=" + value;
+				if (lagged)
+					label += " (t - " + lag + ")";
+				if (delta)
+					label += " (delta)";
 				return label;
 			} else {
 				if (name.equals("_cons"))
