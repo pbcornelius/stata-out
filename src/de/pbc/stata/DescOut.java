@@ -114,7 +114,7 @@ public class DescOut implements Plugin {
 		XSSFRow r = sh.createRow(row);
 		
 		XSSFCell c = r.getCell(0);
-		c.setCellValue(Variable.create(var.substring("var=".length())).getLabel());
+		c.setCellValue(new Variable(var.substring("var=".length())).getLabel());
 		
 		c = r.getCell(1);
 		c.setCellValue(Scalar.getValue("rs_mean"));

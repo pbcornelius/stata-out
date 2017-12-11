@@ -114,10 +114,10 @@ public class RegOut implements Plugin {
 		quietly = args.contains("q") || args.contains("quietly");
 		copy = args.contains("c") || args.contains("copy");
 		
-		String[] varNames = Matrix.getMatrixColNames("e(b)");
-		terms = new ArrayList<>(varNames.length);
-		for (int i = 0; i < varNames.length; i++)
-			terms.add(Term.create(i, varNames[i]));
+		String[] termNames = Matrix.getMatrixColNames("e(b)");
+		terms = new ArrayList<>(termNames.length);
+		for (int i = 0; i < termNames.length; i++)
+			terms.add(new Term(i, termNames[i]));
 		table = StataUtils.getMatrix("r(table)");
 		
 		path = args.stream()
@@ -298,7 +298,7 @@ public class RegOut implements Plugin {
 		XSSFRow r = sh.getRow(row);
 		XSSFCell c = r.getCell(col);
 		
-		Variable dv = Variable.create(Macro.getLocal("e_depvar"));
+		Variable dv = new Variable(Macro.getLocal("e_depvar"));
 		c.setCellValue(dv.getLabel());
 		
 		Iterator<Term> termsItr = terms.iterator();
