@@ -63,10 +63,6 @@ public class Variable {
 		valueLabel = ValueLabel.getVarValueLabel(getIndex());
 		if (valueLabel != null && valueLabel.length() == 0)
 			valueLabel = null;
-		
-		// TODO
-		SFIToolkit.displayln(this.name);
-		SFIToolkit.displayln(this.valueLabel);
 	}
 	
 	// PUBLIC ------------------------------------------------------- //
