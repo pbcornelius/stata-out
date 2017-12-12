@@ -5,6 +5,7 @@ import java.util.regex.Pattern;
 
 import com.stata.sfi.Data;
 import com.stata.sfi.SFIToolkit;
+import com.stata.sfi.ValueLabel;
 
 public class Variable {
 	
@@ -17,6 +18,8 @@ public class Variable {
 	private String name;
 	
 	private String format;
+	
+	private String valueLabel;
 	
 	private Integer value;
 	
@@ -56,6 +59,14 @@ public class Variable {
 			this.format = Data.getVarFormat(getIndex());
 		else
 			this.format = format;
+		
+		valueLabel = ValueLabel.getVarValueLabel(getIndex());
+		if (valueLabel != null && valueLabel.length() == 0)
+			valueLabel = null;
+		
+		// TODO
+		SFIToolkit.displayln(this.name);
+		SFIToolkit.displayln(this.valueLabel);
 	}
 	
 	// PUBLIC ------------------------------------------------------- //
@@ -74,23 +85,25 @@ public class Variable {
 	
 	public String getLabel() {
 		if (hasIndex()) {
-			String label = Data.getVarLabel(getIndex());
+			String varLabel = Data.getVarLabel(getIndex());
 			
-			if (label.isEmpty())
-				label = name;
+			if (varLabel.isEmpty())
+				varLabel = name;
 			
-			if (value != null && format == null)
-				label += " = " + value;
+			if (value != null && format == null && valueLabel == null)
+				varLabel += " = " + value;
+			else if (value != null && valueLabel != null)
+				varLabel += " = " + ValueLabel.getLabel(valueLabel, value);
 			else if (value != null && format != null)
-				label += " = " + SFIToolkit.formatValue(value, format).trim();
+				varLabel += " = " + SFIToolkit.formatValue(value, format).trim();
 			
 			if (lagged)
-				label += " (t - " + lag + ")";
+				varLabel += " (t - " + lag + ")";
 			
 			if (delta)
-				label += " (delta)";
+				varLabel += " (delta)";
 			
-			return label;
+			return varLabel;
 		} else {
 			if (name.equals("_cons"))
 				return "constant";
