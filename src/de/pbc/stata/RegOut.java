@@ -78,8 +78,6 @@ public class RegOut implements Plugin {
 	
 	private double[][] table;
 	
-	private Function<Double, String> sigLevels = (p) -> p < .01 ? "***" : p < .05 ? "**" : p < .1 ? "*" : "";
-	
 	private XSSFWorkbook wb;
 	
 	// ENTRY POINT --------------------------------------------------- //
@@ -115,10 +113,10 @@ public class RegOut implements Plugin {
 		copy = args.contains("c") || args.contains("copy");
 		
 		String[] termNames = Matrix.getMatrixColNames("e(b)");
+		table = StataUtils.getMatrix("r(table)");
 		terms = new ArrayList<>(termNames.length);
 		for (int i = 0; i < termNames.length; i++)
-			terms.add(new Term(i, termNames[i]));
-		table = StataUtils.getMatrix("r(table)");
+			terms.add(new Term(i, termNames[i], table[0][i], table[1][i], table[3][i]));
 		
 		path = args.stream()
 				.filter((a) -> a.startsWith("path="))
@@ -163,6 +161,8 @@ public class RegOut implements Plugin {
 	}
 	
 	private void multiPage() {
+		Function<Double, String> sigLevels = (p) -> p < .01 ? "***" : p < .05 ? "**" : p < .1 ? "*" : "";
+		
 		XSSFSheet sh = wb.createSheet(iterateSheetName(WorkbookUtil.createSafeSheetName(Macro.getLocal("e_depvar")
 				.replaceAll("[\\s\\v]+", " ")), 0));
 		
@@ -318,9 +318,7 @@ public class RegOut implements Plugin {
 					c.setCellValue("0 (omitted)");
 					c.setCellStyle(csText);
 				} else {
-					c.setCellValue(BigDecimal.valueOf(table[0][term.getIndex()]).setScale(2, RoundingMode.HALF_UP)
-							+ sigLevels.apply(table[3][term.getIndex()]) + " (" + BigDecimal.valueOf(table[1][term
-									.getIndex()]).setScale(2, RoundingMode.HALF_UP) + ")");
+					c.setCellValue(term.getCoefficient(2) + term.getSigStars() + " (" + term.getStandardError(2) + ")");
 					c.setCellStyle(csText);
 				}
 			} else if (term.isBase() && rows.containsKey("base " + term.getLabel())) {
@@ -356,18 +354,7 @@ public class RegOut implements Plugin {
 				c.setCellStyle(csText);
 			} else if (!term.isBase()) {
 				c = r.getCell(col);
-				
-				BigDecimal val = BigDecimal.valueOf(table[0][term.getIndex()]);
-				BigDecimal valRounded = val.setScale(2, RoundingMode.HALF_UP);
-				
-				if (val.signum() == -1 && valRounded.signum() != -1) {
-					c.setCellValue("-" + valRounded + sigLevels.apply(table[3][term.getIndex()]) + " (" + BigDecimal
-							.valueOf(table[1][term.getIndex()]).setScale(2, RoundingMode.HALF_UP) + ")");
-				} else {
-					c.setCellValue(valRounded + sigLevels.apply(table[3][term.getIndex()]) + " (" + BigDecimal.valueOf(
-							table[1][term.getIndex()]).setScale(2, RoundingMode.HALF_UP) + ")");
-				}
-				
+				c.setCellValue(term.getCoefficient(2) + term.getSigStars() + " (" + term.getStandardError(2) + ")");
 				c.setCellStyle(csText);
 			}
 		}

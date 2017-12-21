@@ -2,9 +2,14 @@ package de.pbc.stata;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class Term {
+	
+	// CONSTANTS ---------------------------------------------------- //
+	
+	private static final Function<Double, String> SIG_LEVELS = (p) -> p < .01 ? "***" : p < .05 ? "**" : p < .1 ? "*" : "";
 	
 	// VARIABLES ---------------------------------------------------- //
 	
@@ -14,16 +19,29 @@ public class Term {
 	
 	private List<Variable> vars;
 	
+	private Double coef;
+	
+	private Double se;
+	
+	private Double p;
+	
 	// CONSTRUCTOR -------------------------------------------------- //
 	
 	public Term(int index, String name) {
-		this.index = index;
-		this.name = name.trim();
-		vars = Arrays.stream(this.name.split("#")).map(Variable::new).collect(Collectors.toList());
+		this(index, name, null, null, null);
 	}
 	
 	// PUBLIC ------------------------------------------------------- //
 	
+	public Term(int index, String name, Double coef, Double se, Double p) {
+		this.index = index;
+		this.name = name.trim();
+		vars = Arrays.stream(this.name.split("#")).map(Variable::new).collect(Collectors.toList());
+		this.coef = coef;
+		this.se = se;
+		this.p = p;
+	}
+
 	public int getIndex() {
 		return index;
 	}
@@ -54,6 +72,19 @@ public class Term {
 		return vars.stream().anyMatch((v) -> v.isBase());
 	}
 	
+	public String getCoefficient(int scale) {
+		return StataUtils.correctRounding(coef, scale);
+	}
+
+	
+	public String getStandardError(int scale) {
+		return StataUtils.correctRounding(se, scale);
+	}
+	
+	public String getSigStars() {
+		return SIG_LEVELS.apply(p);
+	}
+
 	public String toString() {
 		return getLabel();
 	}
