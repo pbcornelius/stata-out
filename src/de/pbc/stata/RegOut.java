@@ -377,10 +377,17 @@ public class RegOut implements Plugin {
 		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
 			c.setCellValue("R²");
 		c = r.getCell(col);
+		
+		Double r2Val;
 		if (cmd.equals("logit")) {
-			c.setCellValue(Scalar.getValue("es_r2_p"));
+			r2Val = Scalar.getValue("es_r2_p");
 		} else {
-			c.setCellValue(Scalar.getValue("es_r2"));
+			r2Val = Scalar.getValue("es_r2");
+		}
+		
+		// this number (instead of null) is returned by Stata if the value isn't present
+		if (!r2Val.equals(Math.pow(2, 1023))) {
+			c.setCellValue(r2Val);
 		}
 		c.setCellStyle(cs2d);
 		
