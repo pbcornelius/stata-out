@@ -381,6 +381,8 @@ public class RegOut implements Plugin {
 		Double r2Val;
 		if (cmd.equals("logit")) {
 			r2Val = Scalar.getValue("es_r2_p");
+		} else if (cmd.equals("xtregar")) {
+			r2Val = Scalar.getValue("es_r2_w");
 		} else {
 			r2Val = Scalar.getValue("es_r2");
 		}
