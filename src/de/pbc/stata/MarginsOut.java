@@ -16,10 +16,7 @@ import com.stata.sfi.Macro;
 import com.stata.sfi.Matrix;
 import com.stata.sfi.SFIToolkit;
 
-import de.pbc.stata.Plugin;
-import de.pbc.stata.StataUtils;
-
-public class MarginsOut implements Plugin {
+public class MarginsOut {
 	
 	// ENTRY POINT --------------------------------------------------- //
 	
@@ -29,7 +26,6 @@ public class MarginsOut implements Plugin {
 	
 	// PUBLIC ------------------------------------------------------- //
 	
-	@Override
 	public int execute(String[] args) {
 		return marginsOut(args);
 	}

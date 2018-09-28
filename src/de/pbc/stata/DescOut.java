@@ -20,7 +20,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import com.stata.sfi.SFIToolkit;
 import com.stata.sfi.Scalar;
 
-public class DescOut implements Plugin {
+public class DescOut {
 	
 	// VARIABLES ----------------------------------------------------- //
 	
@@ -32,7 +32,6 @@ public class DescOut implements Plugin {
 	
 	// PUBLIC ------------------------------------------------------- //
 	
-	@Override
 	public int execute(String[] args) throws Exception {
 		List<String> argsList = Arrays.asList(args).stream().map((s) -> s.toLowerCase()).collect(Collectors.toList());
 		

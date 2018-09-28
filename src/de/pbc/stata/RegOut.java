@@ -56,9 +56,9 @@ import com.stata.sfi.Scalar;
  * </p>
  * 
  * @author Philipp Cornelius
- * @version 1 (2017-03-06)
+ * @version 2 (2018-09-28)
  */
-public class RegOut implements Plugin {
+public class RegOut {
 	
 	// CONSTANTS ----------------------------------------------------- //
 	
@@ -88,25 +88,24 @@ public class RegOut implements Plugin {
 	
 	// PUBLIC ------------------------------------------------------- //
 	
-	@Override
-	public int execute(String[] args) throws Exception {
-		if (Macro.getLocal("e_cmd") == null)
-			throw new Exception("no estimation stored");
+	public int execute(String[] args) {
+		if (Macro.getGlobal("cmd", Macro.TYPE_ERETURN) == null)
+			throw new RuntimeException("no estimation stored");
 		
 		List<String> argsList = Arrays.asList(args).stream().map((s) -> s.toLowerCase()).collect(Collectors.toList());
 		
-		cmd = Macro.getLocal("e_cmd");
+		cmd = Macro.getGlobal("cmd", Macro.TYPE_ERETURN);
 		regPar = RegPars.byCmd(cmd);
 		
 		if (argsList.contains("e") || argsList.contains("excel"))
 			return excelOut(argsList);
 		else
-			throw new Exception("no output specified");
+			throw new RuntimeException("no output specified");
 	}
 	
 	// PRIVATE ------------------------------------------------------ //
 	
-	private int excelOut(List<String> args) throws Exception {
+	private int excelOut(List<String> args) {
 		merge = args.contains("m") || args.contains("merge");
 		singlePage = args.contains("s") || args.contains("singlepage");
 		quietly = args.contains("q") || args.contains("quietly");
@@ -163,14 +162,14 @@ public class RegOut implements Plugin {
 	private void multiPage() {
 		Function<Double, String> sigLevels = (p) -> p < .01 ? "***" : p < .05 ? "**" : p < .1 ? "*" : "";
 		
-		XSSFSheet sh = wb.createSheet(iterateSheetName(WorkbookUtil.createSafeSheetName(Macro.getLocal("e_depvar")
-				.replaceAll("[\\s\\v]+", " ")), 0));
+		XSSFSheet sh = wb.createSheet(iterateSheetName(WorkbookUtil.createSafeSheetName(Macro.getGlobal("depvar",
+				Macro.TYPE_ERETURN).replaceAll("[\\s\\v]+", " ")), 0));
 		
 		wb.setActiveSheet(wb.getSheetIndex(sh));
 		wb.setSelectedTab(wb.getSheetIndex(sh));
 		
 		Row r = sh.createRow(0);
-		r.createCell(0).setCellValue(Macro.getLocal("e_depvar").replaceAll("[\\s\\v]+", " "));
+		r.createCell(0).setCellValue(Macro.getGlobal("depvar", Macro.TYPE_ERETURN).replaceAll("[\\s\\v]+", " "));
 		r.createCell(2).setCellValue("Coef.");
 		r.createCell(3).setCellValue("Std. Err.");
 		r.createCell(4).setCellValue("t/z");
@@ -197,8 +196,9 @@ public class RegOut implements Plugin {
 			} else {
 				r.createCell(0).setCellValue(terms.get(i).getLabel());
 				if (!terms.get(i).isOmitted()) {
-					r.createCell(1).setCellValue(BigDecimal.valueOf(table[0][i]).setScale(2, RoundingMode.HALF_UP)
-							+ sigLevels.apply(table[3][i]));
+					r.createCell(1)
+							.setCellValue(BigDecimal.valueOf(table[0][i]).setScale(2, RoundingMode.HALF_UP) + sigLevels
+									.apply(table[3][i]));
 					r.getCell(1).setCellStyle(csText);
 					r.createCell(2).setCellValue(table[0][i]);
 					r.getCell(2).setCellStyle(cs2d);
@@ -221,19 +221,19 @@ public class RegOut implements Plugin {
 		
 		r = sh.createRow(terms.size() + 1);
 		r.createCell(0).setCellValue("N");
-		r.createCell(1).setCellValue(Scalar.getValue("es_N"));
+		r.createCell(1).setCellValue(Scalar.getValue("N", Scalar.TYPE_ERETURN));
 		r.getCell(1).setCellStyle(cs0d);
 		
 		if (regPar.hasGroups()) {
 			r = sh.createRow(terms.size() + 2);
 			r.createCell(0).setCellValue("Groups");
-			r.createCell(1).setCellValue(Scalar.getValue("es_N_g"));
+			r.createCell(1).setCellValue(Scalar.getValue("N_g", Scalar.TYPE_ERETURN));
 			r.getCell(1).setCellStyle(cs0d);
 		}
 		
 		r = sh.createRow(terms.size() + 3);
 		r.createCell(0).setCellValue(regPar.getStatName());
-		r.createCell(1).setCellValue(Scalar.getValue(regPar.getStatId()));
+		r.createCell(1).setCellValue(Scalar.getValue(regPar.getStatId(), Scalar.TYPE_ERETURN));
 		r.getCell(1).setCellStyle(cs2d);
 		
 		r = sh.createRow(terms.size() + 4);
@@ -298,7 +298,7 @@ public class RegOut implements Plugin {
 		XSSFRow r = sh.getRow(row);
 		XSSFCell c = r.getCell(col);
 		
-		Variable dv = new Variable(Macro.getLocal("e_depvar"));
+		Variable dv = new Variable(Macro.getGlobal("depvar", Macro.TYPE_ERETURN));
 		c.setCellValue(dv.getLabel());
 		
 		Iterator<Term> termsItr = terms.iterator();
@@ -368,7 +368,7 @@ public class RegOut implements Plugin {
 		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
 			c.setCellValue(regPar.getStatName());
 		c = r.getCell(col);
-		c.setCellValue(Scalar.getValue(regPar.getStatId()));
+		c.setCellValue(Scalar.getValue(regPar.getStatId(), Scalar.TYPE_ERETURN));
 		c.setCellStyle(cs2d);
 		
 		tmpRow = rows.containsKey("R²") ? rows.get("R²") : ++row;
@@ -380,11 +380,11 @@ public class RegOut implements Plugin {
 		
 		Double r2Val;
 		if (cmd.equals("logit")) {
-			r2Val = Scalar.getValue("es_r2_p");
+			r2Val = Scalar.getValue("r2_p", Scalar.TYPE_ERETURN);
 		} else if (cmd.equals("xtregar")) {
-			r2Val = Scalar.getValue("es_r2_w");
+			r2Val = Scalar.getValue("r2_w", Scalar.TYPE_ERETURN);
 		} else {
-			r2Val = Scalar.getValue("es_r2");
+			r2Val = Scalar.getValue("r2", Scalar.TYPE_ERETURN);
 		}
 		
 		// this number (instead of null) is returned by Stata if the value isn't present
@@ -399,7 +399,7 @@ public class RegOut implements Plugin {
 		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
 			c.setCellValue("N");
 		c = r.getCell(col);
-		c.setCellValue(Scalar.getValue("es_N"));
+		c.setCellValue(Scalar.getValue("N", Scalar.TYPE_ERETURN));
 		c.setCellStyle(cs0d);
 		
 		if (regPar.hasGroups()) {
@@ -409,7 +409,7 @@ public class RegOut implements Plugin {
 			if (c.getCellType() == Cell.CELL_TYPE_BLANK)
 				c.setCellValue("Groups");
 			c = r.getCell(col);
-			c.setCellValue(Scalar.getValue("es_N_g"));
+			c.setCellValue(Scalar.getValue("N_g", Scalar.TYPE_ERETURN));
 			c.setCellStyle(cs0d);
 		}
 		

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/Stata DPL"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/Stata Utils"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Stata SFI"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Apache POI"/>

@@ -51,7 +51,7 @@ public class RegPars {
 			
 			@Override
 			public String getStatId() {
-				return "es_F";
+				return "F";
 			}
 		};
 	}
