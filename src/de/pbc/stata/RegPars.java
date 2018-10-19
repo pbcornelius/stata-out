@@ -31,7 +31,7 @@ public class RegPars {
 			
 			@Override
 			public String getStatId() {
-				return "es_F";
+				return "F";
 			}
 		};
 	}
@@ -71,7 +71,7 @@ public class RegPars {
 			
 			@Override
 			public String getStatId() {
-				return "es_chi2";
+				return "chi2";
 			}
 		};
 	}
@@ -86,7 +86,7 @@ public class RegPars {
 			
 			@Override
 			public String getStatId() {
-				return "es_chi2";
+				return "chi2";
 			}
 		};
 	}
