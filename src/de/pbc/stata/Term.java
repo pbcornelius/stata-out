@@ -9,7 +9,9 @@ public class Term {
 	
 	// CONSTANTS ---------------------------------------------------- //
 	
-	private static final Function<Double, String> SIG_LEVELS = (p) -> p < .01 ? "***" : p < .05 ? "**" : p < .1 ? "*" : "";
+	private static final Function<Double, String> SIG_LEVELS = (p) -> p < .01
+			? "***"
+			: p < .05 ? "**" : p < .1 ? "*" : "";
 	
 	// VARIABLES ---------------------------------------------------- //
 	
@@ -41,7 +43,7 @@ public class Term {
 		this.se = se;
 		this.p = p;
 	}
-
+	
 	public int getIndex() {
 		return index;
 	}
@@ -75,7 +77,6 @@ public class Term {
 	public String getCoefficient(int scale) {
 		return StataUtils.correctRounding(coef, scale);
 	}
-
 	
 	public String getStandardError(int scale) {
 		return StataUtils.correctRounding(se, scale);
@@ -84,7 +85,7 @@ public class Term {
 	public String getSigStars() {
 		return SIG_LEVELS.apply(p);
 	}
-
+	
 	public String toString() {
 		return getLabel();
 	}

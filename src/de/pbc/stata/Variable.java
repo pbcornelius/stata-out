@@ -80,7 +80,9 @@ public class Variable {
 	}
 	
 	public String getLabel() {
-		if (hasIndex()) {
+		if (name.equals("_cons")) {
+			return "constant";
+		} else if (hasIndex()) {
 			String varLabel = Data.getVarLabel(getIndex());
 			
 			if (varLabel.isEmpty())
@@ -101,10 +103,7 @@ public class Variable {
 			
 			return varLabel;
 		} else {
-			if (name.equals("_cons"))
-				return "constant";
-			else
-				return name;
+			return name;
 		}
 	}
 	
