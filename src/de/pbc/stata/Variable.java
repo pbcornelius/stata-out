@@ -11,7 +11,8 @@ public class Variable {
 	
 	// CONSTANT ----------------------------------------------------- //
 	
-	private static final Pattern indicator = Pattern.compile("^(\\d*)(?:c?)(o?)(b?)(l(\\d*))?(d?)\\.(.+)");
+	private static final Pattern FLAGS = Pattern.compile(
+			"^(?<flags>([cobid]|(?<val>\\d+)|(?<lag>l\\d*))*)\\.(?<varname>.+)$");
 	
 	// VARIABLES ---------------------------------------------------- //
 	
@@ -41,19 +42,29 @@ public class Variable {
 	
 	public Variable(String name, String format) {
 		name = name.toLowerCase();
+		
 		Matcher m;
-		if ((m = indicator.matcher(name)).matches()) {
-			value = m.group(1).length() > 0 ? Integer.valueOf(m.group(1)) : null;
-			omitted = m.group(2).equalsIgnoreCase("o");
-			base = m.group(3).equalsIgnoreCase("b");
-			lagged = m.group(4) != null;
-			if (lagged && m.group(5).length() > 0)
-				lag = Integer.valueOf(m.group(5));
-			delta = m.group(6).equalsIgnoreCase("d");
-			this.name = m.replaceAll("$7");
+		if ((m = FLAGS.matcher(name)).matches()) {
+			if (m.group("val") != null)
+				value = Integer.valueOf(m.group("val"));
+			
+			if (m.group("lag") != null) {
+				lagged = true;
+				lag = m.group("lag").replace("l", "").isEmpty() ? 1 : Integer.valueOf(m.group("lag").replace("l", ""));
+			}
+			
+			String flags = m.group("flags");
+			
+			omitted = flags.contains("o");
+			base = flags.contains("b");
+			delta = flags.contains("d");
+			
+			this.name = m.group("varname");
 		} else {
 			this.name = name;
 		}
+		
+//		SFIToolkit.displayln(String.format("%1$s o:%2$b b:%3$b d:%4$b", this.name, omitted, base, delta));
 		
 		if (format == null)
 			this.format = Data.getVarFormat(getIndex());

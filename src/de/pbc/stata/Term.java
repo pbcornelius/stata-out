@@ -67,7 +67,7 @@ public class Term {
 	}
 	
 	public boolean isOmitted() {
-		return vars.stream().anyMatch((v) -> v.isOmitted());
+		return !isBase() && vars.stream().anyMatch((v) -> v.isOmitted());
 	}
 	
 	public boolean isBase() {
