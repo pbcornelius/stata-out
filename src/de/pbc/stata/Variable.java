@@ -94,10 +94,19 @@ public class Variable {
 		if (name.equals("_cons")) {
 			return "constant";
 		} else if (hasIndex()) {
-			String varLabel = Data.getVarLabel(getIndex());
+			/*
+			 * Sometimes, Stata returns a non-empty label string, even when
+			 * there is no label defined in Stata. In this case, one can (1) try
+			 * and remove the invalid label in Stata or (2) disable the variable
+			 * labels here.
+			 * This functionality is disabled until Stata fixes this.
+			 */
+//			String varLabel = Data.getVarLabel(getIndex());
+			String varLabel = "";
 			
-			if (varLabel.isEmpty())
+			if (varLabel.isEmpty()) {
 				varLabel = name;
+			}
 			
 			if (value != null && format == null && valueLabel == null)
 				varLabel += " = " + value;
