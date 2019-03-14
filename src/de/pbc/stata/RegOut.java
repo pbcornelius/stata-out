@@ -32,6 +32,7 @@ import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import com.stata.sfi.Data;
 import com.stata.sfi.Macro;
 import com.stata.sfi.Matrix;
 import com.stata.sfi.SFIToolkit;
@@ -368,8 +369,11 @@ public class RegOut {
 		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
 			c.setCellValue(regPar.getStatName());
 		c = r.getCell(col);
-		c.setCellValue(Scalar.getValue(regPar.getStatId(), Scalar.TYPE_ERETURN));
-		c.setCellStyle(cs2d);
+		Double testStat = Scalar.getValue(regPar.getStatId(), Scalar.TYPE_ERETURN);
+		if (!Data.isValueMissing(testStat)) {
+			c.setCellValue(testStat);
+			c.setCellStyle(cs2d);
+		}
 		
 		tmpRow = rows.containsKey("R²") ? rows.get("R²") : ++row;
 		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
