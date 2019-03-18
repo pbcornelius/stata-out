@@ -370,7 +370,7 @@ public class RegOut {
 			c.setCellValue(regPar.getStatName());
 		c = r.getCell(col);
 		Double testStat = Scalar.getValue(regPar.getStatId(), Scalar.TYPE_ERETURN);
-		if (!Data.isValueMissing(testStat)) {
+		if (testStat != null && !Data.isValueMissing(testStat)) {
 			c.setCellValue(testStat);
 			c.setCellStyle(cs2d);
 		}
@@ -392,7 +392,7 @@ public class RegOut {
 		}
 		
 		// this number (instead of null) is returned by Stata if the value isn't present
-		if (!r2Val.equals(Math.pow(2, 1023))) {
+		if (r2Val != null && !r2Val.equals(Math.pow(2, 1023))) {
 			c.setCellValue(r2Val);
 		}
 		c.setCellStyle(cs2d);
