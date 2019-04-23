@@ -108,12 +108,13 @@ public class Variable {
 				varLabel = name;
 			}
 			
-			if (value != null && format == null && valueLabel == null)
+			if (value != null && (format == null || format.isEmpty()) && valueLabel == null)
 				varLabel += " = " + value;
 			else if (value != null && valueLabel != null)
 				varLabel += " = " + ValueLabel.getLabel(valueLabel, value);
-			else if (value != null && format != null)
+			else if (value != null && format != null && !format.isEmpty()) {
 				varLabel += " = " + SFIToolkit.formatValue(value, format).trim();
+			}
 			
 			if (lagged)
 				varLabel += " (t - " + lag + ")";
