@@ -17,8 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -61,15 +59,11 @@ import com.stata.sfi.Scalar;
  */
 public class RegOut {
 	
-	// CONSTANTS ----------------------------------------------------- //
-	
-	private static final Pattern FILE_NAME = Pattern.compile("(^[\\w,\\s-]+?)(?: - Copy (\\d+))?(\\.xlsx)$");
-	
 	// VARIABLES ----------------------------------------------------- //
 	
 	private Path path;
 	
-	private boolean merge, singlePage, quietly, copy;
+	private boolean merge, singlePage, quietly;
 	
 	private String cmd;
 	
@@ -110,7 +104,6 @@ public class RegOut {
 		merge = args.contains("m") || args.contains("merge");
 		singlePage = args.contains("s") || args.contains("singlepage");
 		quietly = args.contains("q") || args.contains("quietly");
-		copy = args.contains("c") || args.contains("copy");
 		
 		String[] termNames = Matrix.getMatrixColNames("e(b)");
 		table = StataUtils.getMatrix("r(table)");
@@ -133,9 +126,6 @@ public class RegOut {
 				singlePage();
 			else
 				multiPage();
-			
-			if (copy)
-				path = iteratePath(path);
 			
 			try (FileOutputStream out = getOutputStream(path)) {
 				wb.write(out);
@@ -429,30 +419,8 @@ public class RegOut {
 		sh.autoSizeColumn(col);
 	}
 	
-	private FileOutputStream getOutputStream(Path path) {
-		try {
-			return new FileOutputStream(path.toFile());
-		} catch (FileNotFoundException e) {
-			this.path = iteratePath(path);
-			return getOutputStream(this.path);
-		}
-	}
-	
-	private Path iteratePath(Path path) {
-		if (Files.exists(path)) {
-			String fileName = path.getName(path.getNameCount() - 1).toString();
-			Matcher m = FILE_NAME.matcher(fileName);
-			m.find();
-			
-			if (m.group(2) == null) {
-				return iteratePath(path.getParent().resolve(m.group(1) + " - Copy 1" + m.group(3)));
-			} else {
-				int copyNumber = Integer.valueOf(m.group(2)) + 1;
-				return iteratePath(path.getParent().resolve(m.group(1) + " - Copy " + copyNumber + m.group(3)));
-			}
-		} else {
-			return path;
-		}
+	private FileOutputStream getOutputStream(Path path) throws FileNotFoundException {
+		return new FileOutputStream(path.toFile());
 	}
 	
 }

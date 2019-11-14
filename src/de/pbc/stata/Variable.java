@@ -99,10 +99,9 @@ public class Variable {
 			 * there is no label defined in Stata. In this case, one can (1) try
 			 * and remove the invalid label in Stata or (2) disable the variable
 			 * labels here.
-			 * This functionality is disabled until Stata fixes this.
 			 */
-//			String varLabel = Data.getVarLabel(getIndex());
-			String varLabel = "";
+			String varLabel = Data.getVarLabel(getIndex());
+//			String varLabel = "";
 			
 			if (varLabel.isEmpty()) {
 				varLabel = name;
