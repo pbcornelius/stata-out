@@ -12,7 +12,7 @@ public class Variable {
 	// CONSTANT ----------------------------------------------------- //
 	
 	private static final Pattern FLAGS = Pattern.compile(
-			"^(?<flags>([cobid]|(?<val>\\d+)|(?<lag>l\\d*))*)\\.(?<varname>.+)$");
+			"(?i)^(?<flags>([cobid]|(?<val>\\d+)|(?<lag>l\\d*))*)\\.(?<varname>.+)$");
 	
 	// VARIABLES ---------------------------------------------------- //
 	
@@ -41,8 +41,6 @@ public class Variable {
 	}
 	
 	public Variable(String name, String format) {
-		name = name.toLowerCase();
-		
 		Matcher m;
 		if ((m = FLAGS.matcher(name)).matches()) {
 			if (m.group("val") != null)
@@ -98,10 +96,13 @@ public class Variable {
 			 * Sometimes, Stata returns a non-empty label string, even when
 			 * there is no label defined in Stata. In this case, one can (1) try
 			 * and remove the invalid label in Stata or (2) disable the variable
-			 * labels here.
+			 * labels here. It looks like this happened b/c the var name was set
+			 * to lower case and then the getVarIndex() didn't return the
+			 * correct index anymore. Not sure if the flag matching now still
+			 * works, but it should since the case-insensitive flag was set in
+			 * the pattern.
 			 */
 			String varLabel = Data.getVarLabel(getIndex());
-//			String varLabel = "";
 			
 			if (varLabel.isEmpty()) {
 				varLabel = name;
