@@ -263,7 +263,7 @@ public class RegOut {
 		}
 		
 		r = sh.getRow(0);
-		for (int col = 1; col < 21; col++) { // TODO no hard values
+		for (int col = 1; col < 101; col++) { // TODO no hard values
 			c = r.getCell(col);
 			if (c.getCellType() == Cell.CELL_TYPE_BLANK) {
 				singlePageFill(sh, col, rows);
