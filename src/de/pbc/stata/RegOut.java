@@ -308,12 +308,10 @@ public class RegOut {
 				if (term.isOmitted()) {
 					c.setCellValue("0 (omitted)");
 					c.setCellStyle(csText);
-				} else {
+				} else if (!term.isBase()) {
 					c.setCellValue(term.getCoefficient(2) + term.getSigStars() + " (" + term.getStandardError(2) + ")");
 					c.setCellStyle(csText);
 				}
-			} else if (term.isBase() && rows.containsKey("base " + term.getLabel())) {
-				termsItr.remove();
 			}
 		}
 		
@@ -323,20 +321,14 @@ public class RegOut {
 			
 			c = r.getCell(0);
 			if (c.getCellType() == Cell.CELL_TYPE_BLANK) {
-				if (term.isBase())
-					c.setCellValue("base " + term.getLabel());
-				else
-					c.setCellValue(term.getLabel());
+				c.setCellValue(term.getLabel());
 			} else {
 				int tmpRow = row;
 				rows.replaceAll((s, i) -> i >= tmpRow ? i + 1 : i);
 				sh.shiftRows(row, sh.getLastRowNum(), 1);
 				r = sh.createRow(row);
 				c = r.getCell(0);
-				if (term.isBase())
-					c.setCellValue("base " + term.getLabel());
-				else
-					c.setCellValue(term.getLabel());
+				c.setCellValue(term.getLabel());
 			}
 			
 			if (term.isOmitted()) {

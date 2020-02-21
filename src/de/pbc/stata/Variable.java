@@ -53,7 +53,7 @@ public class Variable {
 						: Integer.valueOf(m.group("lag").replaceAll("(?i)l", ""));
 			}
 			
-			String flags = m.group("flags");
+			String flags = m.group("flags").toLowerCase();
 			
 			omitted = flags.contains("o");
 			base = flags.contains("b");
@@ -123,6 +123,9 @@ public class Variable {
 			
 			if (delta)
 				varLabel += " (delta)";
+			
+			if (base)
+				varLabel = "base " + varLabel;
 			
 			return varLabel;
 		} else {
