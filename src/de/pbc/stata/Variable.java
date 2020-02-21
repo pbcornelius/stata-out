@@ -48,7 +48,9 @@ public class Variable {
 			
 			if (m.group("lag") != null) {
 				lagged = true;
-				lag = m.group("lag").replace("l", "").isEmpty() ? 1 : Integer.valueOf(m.group("lag").replace("l", ""));
+				lag = m.group("lag").replaceAll("(?i)l", "").isEmpty()
+						? 1
+						: Integer.valueOf(m.group("lag").replaceAll("(?i)l", ""));
 			}
 			
 			String flags = m.group("flags");
