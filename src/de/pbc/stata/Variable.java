@@ -12,7 +12,7 @@ public class Variable {
 	// CONSTANT ----------------------------------------------------- //
 	
 	private static final Pattern FLAGS = Pattern.compile(
-			"(?i)^(?<flags>([cobid]|(?<val>\\d+)|(?<lag>l\\d*))*)\\.(?<varname>.+)$");
+			"(?i)^(?<flags>([cobid]|(?<val>\\d+)|(?<lag>[lf]\\d*))*)\\.(?<varname>.+)$");
 	
 	// VARIABLES ---------------------------------------------------- //
 	
@@ -29,6 +29,8 @@ public class Variable {
 	private boolean base = false;
 	
 	private boolean lagged = false;
+	
+	private boolean lead = false;
 	
 	private Integer lag = 1;
 	
@@ -47,10 +49,14 @@ public class Variable {
 				value = Integer.valueOf(m.group("val"));
 			
 			if (m.group("lag") != null) {
-				lagged = true;
-				lag = m.group("lag").replaceAll("(?i)l", "").isEmpty()
+				if (m.group("lag").contains("l")) {
+					lagged = true;
+				} else {
+					lead = true;
+				}
+				lag = m.group("lag").replaceAll("(?i)[lf]", "").isEmpty()
 						? 1
-						: Integer.valueOf(m.group("lag").replaceAll("(?i)l", ""));
+						: Integer.valueOf(m.group("lag").replaceAll("(?i)[lf]", ""));
 			}
 			
 			String flags = m.group("flags").toLowerCase();
@@ -120,6 +126,9 @@ public class Variable {
 			
 			if (lagged)
 				varLabel += " (t - " + lag + ")";
+			
+			if (lead)
+				varLabel += " (t + " + lag + ")";
 			
 			if (delta)
 				varLabel += " (delta)";
