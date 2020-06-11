@@ -49,7 +49,7 @@ public class Variable {
 				value = Integer.valueOf(m.group("val"));
 			
 			if (m.group("lag") != null) {
-				if (m.group("lag").contains("l")) {
+				if (m.group("lag").matches("(?i).*l.*")) {
 					lagged = true;
 				} else {
 					lead = true;
