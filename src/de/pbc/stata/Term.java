@@ -2,8 +2,11 @@ package de.pbc.stata;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import com.stata.sfi.Data;
 
 public class Term {
 	
@@ -39,8 +42,8 @@ public class Term {
 		this.index = index;
 		this.name = name.trim();
 		vars = Arrays.stream(this.name.split("#")).map(Variable::new).collect(Collectors.toList());
-		this.coef = coef;
-		this.se = se;
+		this.coef = Data.isValueMissing(coef) ? null : coef;
+		this.se = Data.isValueMissing(se) ? null : se;
 		this.p = p;
 	}
 	
@@ -75,11 +78,19 @@ public class Term {
 	}
 	
 	public String getCoefficient(int scale) {
-		return StataUtils.correctRounding(coef, scale);
+		if (Objects.nonNull(coef)) {
+			return StataUtils.correctRounding(coef, scale);
+		} else {
+			return "";
+		}
 	}
 	
 	public String getStandardError(int scale) {
-		return StataUtils.correctRounding(se, scale);
+		if (Objects.nonNull(se)) {
+			return StataUtils.correctRounding(se, scale);
+		} else {
+			return "";
+		}
 	}
 	
 	public String getSigStars() {
