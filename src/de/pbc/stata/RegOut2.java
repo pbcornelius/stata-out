@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -19,6 +20,7 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.util.WorkbookUtil;
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFRow;
@@ -39,19 +41,16 @@ import com.stata.sfi.Scalar;
  * <p>
  * Takes the following arguments:
  * <ul>
- * <li>{@code path}: path of output file (regOut.xlsx default)</li>
+ * <li>{@code path=}: path of output file (regOut.xlsx default)</li>
  * <li>{@code m/merge}: merge with existing Excel file, if it exist (in
  * combination with {@code copy} the existing file is used as input)</li>
+ * <li>{@code sh/sheet[=]}: new sheet / sheet name
  * </ul>
  * </p>
  */
 public class RegOut2 {
 	
 	// VARIABLES ----------------------------------------------------- //
-	
-	private Path path;
-	
-	private boolean merge;
 	
 	private String cmd;
 	
@@ -73,18 +72,24 @@ public class RegOut2 {
 		
 		List<String> argsList = Arrays.asList(args).stream().map((s) -> s.toLowerCase()).collect(Collectors.toList());
 		
-		merge = argsList.contains("m") || argsList.contains("merge");
+		boolean merge = argsList.contains("m") || argsList.contains("merge");
 		cmd = Macro.getGlobal("cmd", Macro.TYPE_ERETURN);
 		regPar = RegPars.byCmd(cmd);
 		String[] termNames = Matrix.getMatrixColNames("e(b)");
 		double[][] resultsTable = StataUtils.getMatrix("r(table)");
 		Variable dv = new Variable(Macro.getGlobal("depvar", Macro.TYPE_ERETURN));
 		
-		path = argsList.stream()
+		Path path = argsList.stream()
 				.filter((a) -> a.startsWith("path="))
 				.findFirst()
 				.map((a) -> Paths.get(a.substring("path=".length())))
 				.orElse(Paths.get("regOut.xlsx"));
+		
+		String sheet = argsList.stream()
+				.filter(a -> a.startsWith("sheet") || a.startsWith("sh"))
+				.findFirst()
+				.map(s -> s.substring(s.indexOf("=") + 1))
+				.orElse(null);
 		
 		try (XSSFWorkbook wb = merge && Files.exists(path)
 				? new XSSFWorkbook(Files.newInputStream(path))
@@ -92,7 +97,16 @@ public class RegOut2 {
 			this.wb = wb;
 			
 			wb.setMissingCellPolicy(Row.CREATE_NULL_AS_BLANK);
-			XSSFSheet sh = Optional.ofNullable(wb.getSheet("Sheet0")).orElseGet(() -> wb.createSheet());
+			
+			XSSFSheet sh;
+			if (Objects.isNull(sheet)) {
+				sh = Optional.ofNullable(wb.getSheet("Sheet0")).orElseGet(() -> wb.createSheet());
+			} else if (sheet.equals("sh") || sheet.equals("sheet")) {
+				sh = wb.createSheet(iterateSheetName("Sheet", 1));
+			} else {
+				sh = Optional.ofNullable(wb.getSheet(WorkbookUtil.createSafeSheetName(sheet)))
+						.orElseGet(() -> wb.createSheet(WorkbookUtil.createSafeSheetName(sheet)));
+			}
 			wb.setActiveSheet(wb.getSheetIndex(sh));
 			wb.setSelectedTab(wb.getSheetIndex(sh));
 			
@@ -134,6 +148,14 @@ public class RegOut2 {
 	}
 	
 	// PRIVATE ------------------------------------------------------ //
+	
+	private String iterateSheetName(String name, int i) {
+		String tmpName = name + i;
+		if (wb.getSheet(tmpName) == null)
+			return tmpName;
+		else
+			return iterateSheetName(name, i + 1);
+	}
 	
 	private void addModel(XSSFSheet sh, List<Term> terms, String modelTitle) {
 		XSSFRow r = Optional.ofNullable(sh.getRow(0)).orElseGet(() -> sh.createRow(0));
