@@ -27,6 +27,12 @@ public class ModelStat {
 		this.label = label;
 		this.defScale = defScale;
 		
+		getValues();
+	}
+	
+	// PROTECTED ---------------------------------------------------- //
+	
+	protected void getValues() {
 		val = Scalar.getValue(local, Scalar.TYPE_ERETURN);
 		val = Data.isValueMissing(val) ? null : val;
 		
@@ -70,6 +76,11 @@ public class ModelStat {
 		} else {
 			return "";
 		}
+	}
+	
+	@Override
+	public String toString() {
+		return getVal() + getSigStars();
 	}
 	
 }

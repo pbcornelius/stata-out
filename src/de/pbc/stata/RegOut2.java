@@ -28,7 +28,6 @@ import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import com.stata.sfi.Macro;
-import com.stata.sfi.Matrix;
 import com.stata.sfi.SFIToolkit;
 
 /**
@@ -71,9 +70,7 @@ public class RegOut2 {
 		
 		boolean merge = argsList.contains("m") || argsList.contains("merge");
 		cmd = Macro.getGlobal("cmd", Macro.TYPE_ERETURN);
-		regPar = RegPars.byCmd(cmd, new Variable(Macro.getGlobal("depvar", Macro.TYPE_ERETURN)));
-		String[] termNames = Matrix.getMatrixColNames("e(b)");
-		double[][] resultsTable = StataUtils.getMatrix("r(table)");
+		regPar = RegPars.byCmd(cmd);
 		
 		Path path = argsList.stream()
 				.filter((a) -> a.startsWith("path="))
@@ -107,14 +104,11 @@ public class RegOut2 {
 			wb.setSelectedTab(wb.getSheetIndex(sh));
 			
 			if (regPar.hasMultipleEquations()) {
-				SFIToolkit.executeCommand("local coleq : coleq e(b)", false);
-				String[] termEquations = StataUtils.getMacroArray("coleq");
-				
 				String[] equations;
 				if (regPar.hasDefinedMultipleEquations()) {
 					equations = regPar.getDefinedMultipleEquations();
 				} else {
-					equations = Arrays.stream(termEquations)
+					equations = Arrays.stream(regPar.getTermEquations())
 							.distinct()
 							.collect(Collectors.toList())
 							.toArray(new String[0]);
@@ -122,21 +116,25 @@ public class RegOut2 {
 				
 				for (String eq : equations) {
 					List<Term> terms = new ArrayList<>();
-					for (int col = 0; col < termEquations.length; col++) {
-						if (termEquations[col].equals(eq)) {
+					for (int col = 0; col < regPar.getTermEquations().length; col++) {
+						if (regPar.getTermEquations()[col].equals(eq)) {
 							terms.add(new Term(col,
-									termNames[col],
-									resultsTable[0][col],
-									resultsTable[1][col],
-									resultsTable[3][col]));
+									regPar.getTermNames()[col],
+									regPar.getResultsTable()[0][col],
+									regPar.getResultsTable()[1][col],
+									regPar.getResultsTable()[3][col]));
 						}
 					}
 					addModel(sh, terms, String.format("%s (%s)", regPar.getDv(), eq));
 				}
 			} else {
-				List<Term> terms = new ArrayList<>(termNames.length);
-				for (int i = 0; i < termNames.length; i++)
-					terms.add(new Term(i, termNames[i], resultsTable[0][i], resultsTable[1][i], resultsTable[3][i]));
+				List<Term> terms = new ArrayList<>(regPar.getTermNames().length);
+				for (int i = 0; i < regPar.getTermNames().length; i++)
+					terms.add(new Term(i,
+							regPar.getTermNames()[i],
+							regPar.getResultsTable()[0][i],
+							regPar.getResultsTable()[1][i],
+							regPar.getResultsTable()[3][i]));
 				addModel(sh, terms, regPar.getDv().getLabel());
 			}
 			
@@ -268,7 +266,7 @@ public class RegOut2 {
 			if (c.getCellType() == Cell.CELL_TYPE_BLANK)
 				c.setCellValue(stat.getLabel());
 			c = r.getCell(col);
-			c.setCellValue(stat.getVal() + stat.getSigStars());
+			c.setCellValue(stat.toString());
 			c.setCellStyle(csText);
 		}
 		
