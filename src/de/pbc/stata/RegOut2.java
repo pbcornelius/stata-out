@@ -27,11 +27,9 @@ import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import com.stata.sfi.Data;
 import com.stata.sfi.Macro;
 import com.stata.sfi.Matrix;
 import com.stata.sfi.SFIToolkit;
-import com.stata.sfi.Scalar;
 
 /**
  * <p>
@@ -74,10 +72,9 @@ public class RegOut2 {
 		
 		boolean merge = argsList.contains("m") || argsList.contains("merge");
 		cmd = Macro.getGlobal("cmd", Macro.TYPE_ERETURN);
-		regPar = RegPars.byCmd(cmd);
+		regPar = RegPars.byCmd(cmd, new Variable(Macro.getGlobal("depvar", Macro.TYPE_ERETURN)));
 		String[] termNames = Matrix.getMatrixColNames("e(b)");
 		double[][] resultsTable = StataUtils.getMatrix("r(table)");
-		Variable dv = new Variable(Macro.getGlobal("depvar", Macro.TYPE_ERETURN));
 		
 		Path path = argsList.stream()
 				.filter((a) -> a.startsWith("path="))
@@ -110,13 +107,24 @@ public class RegOut2 {
 			wb.setActiveSheet(wb.getSheetIndex(sh));
 			wb.setSelectedTab(wb.getSheetIndex(sh));
 			
-			if (cmd.equals("sqreg")) {
+			if (regPar.hasMultipleEquations()) {
 				SFIToolkit.executeCommand("local coleq : coleq e(b)", false);
-				String[] equations = StataUtils.getMacroArray("coleq");
-				for (String eq : Arrays.stream(equations).distinct().collect(Collectors.toList())) {
+				String[] termEquations = StataUtils.getMacroArray("coleq");
+				
+				String[] equations;
+				if (regPar.hasDefinedMultipleEquations()) {
+					equations = regPar.getDefinedMultipleEquations();
+				} else {
+					equations = Arrays.stream(termEquations)
+							.distinct()
+							.collect(Collectors.toList())
+							.toArray(new String[0]);
+				}
+				
+				for (String eq : equations) {
 					List<Term> terms = new ArrayList<>();
-					for (int col = 0; col < equations.length; col++) {
-						if (equations[col].equals(eq)) {
+					for (int col = 0; col < termEquations.length; col++) {
+						if (termEquations[col].equals(eq)) {
 							terms.add(new Term(col,
 									termNames[col],
 									resultsTable[0][col],
@@ -124,13 +132,13 @@ public class RegOut2 {
 									resultsTable[3][col]));
 						}
 					}
-					addModel(sh, terms, String.format("%s (%s)", dv, eq));
+					addModel(sh, terms, String.format("%s (%s)", regPar.getDv(), eq));
 				}
 			} else {
 				List<Term> terms = new ArrayList<>(termNames.length);
 				for (int i = 0; i < termNames.length; i++)
 					terms.add(new Term(i, termNames[i], resultsTable[0][i], resultsTable[1][i], resultsTable[3][i]));
-				addModel(sh, terms, dv.getLabel());
+				addModel(sh, terms, regPar.getDv().getLabel());
 			}
 			
 			try (FileOutputStream out = new FileOutputStream(path.toFile())) {
@@ -173,7 +181,7 @@ public class RegOut2 {
 		}
 		
 		r = sh.getRow(0);
-		for (int col = 1; col < 101; col++) { // TODO no hard values
+		for (int col = 1; col < 1001; col++) {
 			c = r.getCell(col);
 			if (c.getCellType() == Cell.CELL_TYPE_BLANK) {
 				fillModel(sh, col, rows, terms, modelTitle);
@@ -254,58 +262,15 @@ public class RegOut2 {
 		row = sh.getLastRowNum();
 		int tmpRow;
 		
-		tmpRow = rows.containsKey(regPar.getStatName()) ? rows.get(regPar.getStatName()) : ++row;
-		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
-		c = r.getCell(0);
-		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
-			c.setCellValue(regPar.getStatName());
-		c = r.getCell(col);
-		Double testStat = Scalar.getValue(regPar.getStatId(), Scalar.TYPE_ERETURN);
-		if (testStat != null && !Data.isValueMissing(testStat)) {
-			c.setCellValue(testStat);
-			c.setCellStyle(cs2d);
-		}
-		
-		tmpRow = rows.containsKey("R²") ? rows.get("R²") : ++row;
-		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
-		c = r.getCell(0);
-		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
-			c.setCellValue("R²");
-		c = r.getCell(col);
-		
-		Double r2Val;
-		if (cmd.equals("logit")) {
-			r2Val = Scalar.getValue("r2_p", Scalar.TYPE_ERETURN);
-		} else if (cmd.equals("xtregar")) {
-			r2Val = Scalar.getValue("r2_w", Scalar.TYPE_ERETURN);
-		} else {
-			r2Val = Scalar.getValue("r2", Scalar.TYPE_ERETURN);
-		}
-		
-		// this number (instead of null) is returned by Stata if the value isn't present
-		if (r2Val != null && !r2Val.equals(Math.pow(2, 1023))) {
-			c.setCellValue(r2Val);
-		}
-		c.setCellStyle(cs2d);
-		
-		tmpRow = rows.containsKey("N") ? rows.get("N") : ++row;
-		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
-		c = r.getCell(0);
-		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
-			c.setCellValue("N");
-		c = r.getCell(col);
-		c.setCellValue(Scalar.getValue("N", Scalar.TYPE_ERETURN));
-		c.setCellStyle(cs0d);
-		
-		if (regPar.hasGroups()) {
-			tmpRow = rows.containsKey("Groups") ? rows.get("Groups") : ++row;
+		for (ModelStat stat : regPar.getStats()) {
+			tmpRow = rows.containsKey(stat.getLabel()) ? rows.get(stat.getLabel()) : ++row;
 			r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
 			c = r.getCell(0);
 			if (c.getCellType() == Cell.CELL_TYPE_BLANK)
-				c.setCellValue("Groups");
+				c.setCellValue(stat.getLabel());
 			c = r.getCell(col);
-			c.setCellValue(Scalar.getValue("N_g", Scalar.TYPE_ERETURN));
-			c.setCellStyle(cs0d);
+			c.setCellValue(stat.getVal() + stat.getSigStars());
+			c.setCellStyle(csText);
 		}
 		
 		tmpRow = rows.containsKey("created") ? rows.get("created") : ++row;

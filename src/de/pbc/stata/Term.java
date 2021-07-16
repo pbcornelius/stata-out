@@ -12,7 +12,7 @@ public class Term {
 	
 	// CONSTANTS ---------------------------------------------------- //
 	
-	private static final Function<Double, String> SIG_LEVELS = (p) -> p < .01
+	public static final Function<Double, String> SIG_LEVELS = (p) -> p < .01
 			? "***"
 			: p < .05 ? "**" : p < .1 ? "*" : "";
 	
