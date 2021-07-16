@@ -40,8 +40,7 @@ import com.stata.sfi.SFIToolkit;
  * Takes the following arguments:
  * <ul>
  * <li>{@code path=}: path of output file (regOut.xlsx default)</li>
- * <li>{@code m/merge}: merge with existing Excel file, if it exist (in
- * combination with {@code copy} the existing file is used as input)</li>
+ * <li>{@code m/merge}: merge with existing Excel file, if it exist</li>
  * <li>{@code sh/sheet[=]}: new sheet / sheet name
  * </ul>
  * </p>
