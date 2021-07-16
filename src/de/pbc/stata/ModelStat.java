@@ -32,7 +32,9 @@ public class ModelStat {
 		
 		if (Objects.nonNull(localP)) {
 			p = Scalar.getValue(localP, Scalar.TYPE_ERETURN);
-			p = Data.isValueMissing(p) ? null : p;
+			if (Objects.nonNull(p)) {
+				p = Data.isValueMissing(p) ? null : p;
+			}
 		}
 	}
 	
