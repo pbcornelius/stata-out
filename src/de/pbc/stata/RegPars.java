@@ -1,10 +1,16 @@
 package de.pbc.stata;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import com.stata.sfi.Data;
+import com.stata.sfi.Scalar;
 
 public class RegPars {
 	
@@ -64,14 +70,46 @@ public class RegPars {
 			case "sqreg":
 				return new RegPar() {
 					
+					protected Map<String, Collection<ModelStat>> eqStats;
+					
+					protected Collection<ModelStat> modelStats;
+					
 					@Override
 					public Collection<ModelStat> getStats() {
-						return List.of(new ModelStat("N", null, "N", 0));
+						if (Objects.isNull(modelStats)) {
+							modelStats = List.of(new ModelStat("N", null, "N", 0));
+						}
+						return modelStats;
 					}
 					
 					@Override
 					public boolean hasMultipleEquations() {
 						return true;
+					}
+					
+					@Override
+					public Collection<ModelStat> getEquationStats(String eq) {
+						if (Objects.isNull(eqStats)) {
+							List<String> eqs = Arrays.stream(getTermEquations())
+									.distinct()
+									.collect(Collectors.toList());
+							eqStats = new HashMap<>(eqs.size());
+							for (int i = 1; i <= eqs.size(); i++) {
+								double sumrdv = Scalar.getValue(String.format("sumrdv%d", i), Scalar.TYPE_ERETURN);
+								double sumadv = Scalar.getValue(String.format("sumadv%d", i), Scalar.TYPE_ERETURN);
+								double r2_p = 1 - (sumadv / sumrdv);
+								eqStats.computeIfAbsent(eqs.get(i - 1), k -> new ArrayList<>())
+										.add(new ModelStat("r2_p", null, "Pseudo R²") {
+											
+											protected void getValues() {
+												val = r2_p;
+											};
+											
+										});
+							}
+						}
+						
+						return eqStats.get(eq);
 					}
 					
 				};

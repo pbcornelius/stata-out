@@ -1,6 +1,7 @@
 package de.pbc.stata;
 
 import java.util.Collection;
+import java.util.Collections;
 
 import com.stata.sfi.Macro;
 import com.stata.sfi.Matrix;
@@ -63,6 +64,10 @@ public abstract class RegPar {
 	
 	public String[] getDefinedMultipleEquations() {
 		return null;
+	}
+	
+	public Collection<ModelStat> getEquationStats(String eq) {
+		return Collections.emptyList();
 	}
 	
 }

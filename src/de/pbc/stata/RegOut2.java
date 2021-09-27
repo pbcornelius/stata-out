@@ -125,7 +125,7 @@ public class RegOut2 {
 									regPar.getResultsTable()[3][col]));
 						}
 					}
-					addModel(sh, terms, String.format("%s (%s)", regPar.getDv(), eq));
+					addModel(sh, terms, String.format("%s (%s)", regPar.getDv(), eq), eq);
 				}
 			} else {
 				List<Term> terms = new ArrayList<>(regPar.getTermNames().length);
@@ -135,7 +135,7 @@ public class RegOut2 {
 							regPar.getResultsTable()[0][i],
 							regPar.getResultsTable()[1][i],
 							regPar.getResultsTable()[3][i]));
-				addModel(sh, terms, regPar.getDv().getLabel());
+				addModel(sh, terms, regPar.getDv().getLabel(), null);
 			}
 			
 			try (FileOutputStream out = new FileOutputStream(path.toFile())) {
@@ -162,7 +162,7 @@ public class RegOut2 {
 			return iterateSheetName(name, i + 1);
 	}
 	
-	private void addModel(XSSFSheet sh, List<Term> terms, String modelTitle) {
+	private void addModel(XSSFSheet sh, List<Term> terms, String modelTitle, String eq) {
 		XSSFRow r = Optional.ofNullable(sh.getRow(0)).orElseGet(() -> sh.createRow(0));
 		
 		XSSFCell c = r.getCell(0);
@@ -181,13 +181,14 @@ public class RegOut2 {
 		for (int col = 1; col < 1001; col++) {
 			c = r.getCell(col);
 			if (c.getCellType() == Cell.CELL_TYPE_BLANK) {
-				fillModel(sh, col, rows, terms, modelTitle);
+				fillModel(sh, col, rows, terms, modelTitle, eq);
 				break;
 			}
 		}
 	}
 	
-	private void fillModel(XSSFSheet sh, int col, Map<String, Integer> rows, List<Term> terms, String modelTitle) {
+	private void fillModel(XSSFSheet sh, int col, Map<String, Integer> rows, List<Term> terms, String modelTitle,
+			String eq) {
 		CellStyle cs0d = wb.createCellStyle();
 		cs0d.setDataFormat(wb.createDataFormat().getFormat("#,##0"));
 		
@@ -258,6 +259,19 @@ public class RegOut2 {
 		
 		row = sh.getLastRowNum();
 		int tmpRow;
+		
+		if (Objects.nonNull(eq)) {
+			for (ModelStat stat : regPar.getEquationStats(eq)) {
+				tmpRow = rows.containsKey(stat.getLabel()) ? rows.get(stat.getLabel()) : ++row;
+				r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
+				c = r.getCell(0);
+				if (c.getCellType() == Cell.CELL_TYPE_BLANK)
+					c.setCellValue(stat.getLabel());
+				c = r.getCell(col);
+				c.setCellValue(stat.toString());
+				c.setCellStyle(csText);
+			}
+		}
 		
 		for (ModelStat stat : regPar.getStats()) {
 			tmpRow = rows.containsKey(stat.getLabel()) ? rows.get(stat.getLabel()) : ++row;
