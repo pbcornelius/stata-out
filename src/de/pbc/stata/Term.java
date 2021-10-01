@@ -42,8 +42,8 @@ public class Term {
 		this.index = index;
 		this.name = name.trim();
 		vars = Arrays.stream(this.name.split("#")).map(Variable::new).collect(Collectors.toList());
-		this.coef = Data.isValueMissing(coef) ? null : coef;
-		this.se = Data.isValueMissing(se) ? null : se;
+		this.coef = Objects.isNull(coef) || Data.isValueMissing(coef) ? null : coef;
+		this.se = Objects.isNull(se) || Data.isValueMissing(se) ? null : se;
 		this.p = p;
 	}
 	
@@ -94,7 +94,11 @@ public class Term {
 	}
 	
 	public String getSigStars() {
-		return SIG_LEVELS.apply(p);
+		if (Objects.isNull(p)) {
+			return "";
+		} else {
+			return SIG_LEVELS.apply(p);
+		}
 	}
 	
 	public String toString() {

@@ -6,7 +6,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -50,7 +49,7 @@ public class RegOut2 {
 	
 	private String cmd;
 	
-	private RegPar regPar;
+	private ModelResult regPar;
 	
 	private XSSFWorkbook wb;
 	
@@ -70,7 +69,7 @@ public class RegOut2 {
 		
 		boolean merge = argsList.contains("m") || argsList.contains("merge");
 		cmd = Macro.getGlobal("cmd", Macro.TYPE_ERETURN);
-		regPar = RegPars.byCmd(cmd);
+		regPar = Models.byCmd(cmd);
 		
 		Path path = argsList.stream()
 				.filter((a) -> a.startsWith("path="))
@@ -104,38 +103,11 @@ public class RegOut2 {
 			wb.setSelectedTab(wb.getSheetIndex(sh));
 			
 			if (regPar.hasMultipleEquations()) {
-				String[] equations;
-				if (regPar.hasDefinedMultipleEquations()) {
-					equations = regPar.getDefinedMultipleEquations();
-				} else {
-					equations = Arrays.stream(regPar.getTermEquations())
-							.distinct()
-							.collect(Collectors.toList())
-							.toArray(new String[0]);
-				}
-				
-				for (String eq : equations) {
-					List<Term> terms = new ArrayList<>();
-					for (int col = 0; col < regPar.getTermEquations().length; col++) {
-						if (regPar.getTermEquations()[col].equals(eq)) {
-							terms.add(new Term(col,
-									regPar.getTermNames()[col],
-									regPar.getResultsTable()[0][col],
-									regPar.getResultsTable()[1][col],
-									regPar.getResultsTable()[3][col]));
-						}
-					}
-					addModel(sh, terms, String.format("%s (%s)", regPar.getDv(), eq), eq);
+				for (String eq : regPar.getEquations()) {
+					addModel(sh, regPar.getTerms(eq), String.format("%s (%s)", regPar.getDv(), eq), eq);
 				}
 			} else {
-				List<Term> terms = new ArrayList<>(regPar.getTermNames().length);
-				for (int i = 0; i < regPar.getTermNames().length; i++)
-					terms.add(new Term(i,
-							regPar.getTermNames()[i],
-							regPar.getResultsTable()[0][i],
-							regPar.getResultsTable()[1][i],
-							regPar.getResultsTable()[3][i]));
-				addModel(sh, terms, regPar.getDv().getLabel(), null);
+				addModel(sh, regPar.getTerms(), regPar.getDv().getLabel(), null);
 			}
 			
 			try (FileOutputStream out = new FileOutputStream(path.toFile())) {
@@ -273,7 +245,7 @@ public class RegOut2 {
 			}
 		}
 		
-		for (ModelStat stat : regPar.getStats()) {
+		for (ModelStat stat : regPar.getModelStats()) {
 			tmpRow = rows.containsKey(stat.getLabel()) ? rows.get(stat.getLabel()) : ++row;
 			r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
 			c = r.getCell(0);
