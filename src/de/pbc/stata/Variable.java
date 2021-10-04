@@ -12,7 +12,7 @@ public class Variable {
 	// CONSTANT ----------------------------------------------------- //
 	
 	private static final Pattern FLAGS = Pattern.compile(
-			"(?i)^(?<flags>([cobid]|(?<val>\\d+)|(?<lag>[lf]\\d*))*)\\.(?<varname>.+)$");
+			"(?i)^(?<flags>([cobidn]|(?<val>\\d+)|(?<lag>[lf]\\d*))*)\\.(?<varname>.+)$");
 	
 	// VARIABLES ---------------------------------------------------- //
 	
@@ -62,7 +62,7 @@ public class Variable {
 			String flags = m.group("flags").toLowerCase();
 			
 			omitted = flags.contains("o");
-			base = flags.contains("b");
+			base = flags.contains("b") && !flags.contains("bn");
 			delta = flags.contains("d");
 			
 			this.name = m.group("varname");
