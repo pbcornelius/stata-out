@@ -15,8 +15,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.util.WorkbookUtil;
@@ -88,7 +88,7 @@ public class RegOut2 {
 				: new XSSFWorkbook()) {
 			this.wb = wb;
 			
-			wb.setMissingCellPolicy(Row.CREATE_NULL_AS_BLANK);
+			wb.setMissingCellPolicy(Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
 			
 			XSSFSheet sh;
 			if (Objects.isNull(sheet)) {
@@ -138,21 +138,21 @@ public class RegOut2 {
 		XSSFRow r = Optional.ofNullable(sh.getRow(0)).orElseGet(() -> sh.createRow(0));
 		
 		XSSFCell c = r.getCell(0);
-		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
+		if (c.getCellType().equals(CellType.BLANK))
 			c.setCellValue("Variables");
 		
 		Map<String, Integer> rows = new HashMap<>();
 		for (int row = 1; row <= sh.getLastRowNum(); row++) {
 			r = sh.getRow(row);
 			c = r.getCell(0);
-			if (c.getCellType() != Cell.CELL_TYPE_BLANK)
+			if (!c.getCellType().equals(CellType.BLANK))
 				rows.put(c.getStringCellValue(), row);
 		}
 		
 		r = sh.getRow(0);
 		for (int col = 1; col < 1001; col++) {
 			c = r.getCell(col);
-			if (c.getCellType() == Cell.CELL_TYPE_BLANK) {
+			if (c.getCellType().equals(CellType.BLANK)) {
 				fillModel(sh, col, rows, terms, modelTitle, eq);
 				break;
 			}
@@ -207,7 +207,7 @@ public class RegOut2 {
 			r = sh.getRow(row) != null ? sh.getRow(row) : sh.createRow(row);
 			
 			c = r.getCell(0);
-			if (c.getCellType() == Cell.CELL_TYPE_BLANK) {
+			if (c.getCellType().equals(CellType.BLANK)) {
 				c.setCellValue(term.getLabel());
 			} else {
 				int tmpRow = row;
@@ -237,7 +237,7 @@ public class RegOut2 {
 				tmpRow = rows.containsKey(stat.getLabel()) ? rows.get(stat.getLabel()) : ++row;
 				r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
 				c = r.getCell(0);
-				if (c.getCellType() == Cell.CELL_TYPE_BLANK)
+				if (c.getCellType().equals(CellType.BLANK))
 					c.setCellValue(stat.getLabel());
 				c = r.getCell(col);
 				c.setCellValue(stat.toString());
@@ -249,7 +249,7 @@ public class RegOut2 {
 			tmpRow = rows.containsKey(stat.getLabel()) ? rows.get(stat.getLabel()) : ++row;
 			r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
 			c = r.getCell(0);
-			if (c.getCellType() == Cell.CELL_TYPE_BLANK)
+			if (c.getCellType().equals(CellType.BLANK))
 				c.setCellValue(stat.getLabel());
 			c = r.getCell(col);
 			c.setCellValue(stat.toString());
@@ -259,7 +259,7 @@ public class RegOut2 {
 		tmpRow = rows.containsKey("created") ? rows.get("created") : ++row;
 		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
 		c = r.getCell(0);
-		if (c.getCellType() == Cell.CELL_TYPE_BLANK)
+		if (c.getCellType().equals(CellType.BLANK))
 			c.setCellValue("created");
 		c = r.getCell(col);
 		c.setCellValue(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));

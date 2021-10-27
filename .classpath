@@ -7,8 +7,12 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Stata SFI"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Apache POI"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/Stata Utils"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Apache Commons Math"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Apache POI 5"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Apache Commons Collections"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Apache Commons Compress"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Log4j API 2.14"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Log4j Core 2.14"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

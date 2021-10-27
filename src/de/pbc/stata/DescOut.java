@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFRow;
@@ -79,7 +79,7 @@ public class DescOut {
 	}
 	
 	private void singlePage() {
-		wb.setMissingCellPolicy(Row.CREATE_NULL_AS_BLANK);
+		wb.setMissingCellPolicy(Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
 		XSSFSheet sh = Optional.ofNullable(wb.getSheet("Sheet0")).orElseGet(() -> wb.createSheet());
 		wb.setActiveSheet(wb.getSheetIndex(sh));
 		wb.setSelectedTab(wb.getSheetIndex(sh));
@@ -87,7 +87,7 @@ public class DescOut {
 		XSSFRow r = Optional.ofNullable(sh.getRow(0)).orElseGet(() -> sh.createRow(0));
 		
 		XSSFCell c = r.getCell(0);
-		if (c.getCellType() == Cell.CELL_TYPE_BLANK) {
+		if (c.getCellType().equals(CellType.BLANK)) {
 			c.setCellValue("Variables");
 			
 			c = r.getCell(1);
