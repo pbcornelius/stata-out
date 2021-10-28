@@ -198,13 +198,19 @@ public class Models {
 				List<Term> terms = new ArrayList<>();
 				for (int j = 0; j < termNames.size(); j++) {
 					String termName = termNames.get(j);
-					terms.add(new Term(j,
-							termName,
-							coefs[j][i],
-							Math.sqrt(V[j + termNames.size() * i][j + termNames.size() * i]),
-							// there's no upper tail t distribution in Java. Instead, subtract from 1.
-							2 * (1 - t.cumulativeProbability(Math.abs(coefs[j][i] / Math.sqrt(V[j + termNames.size()
-									* i][j + termNames.size() * i]))))));
+					
+					if (coefs[j][i] == 0 && V[j + termNames.size() * i][j + termNames.size() * i] == 0) {
+						// could not be estimated
+						terms.add(new Term(j, termName, null, null, null));
+					} else {
+						terms.add(new Term(j,
+								termName,
+								coefs[j][i],
+								Math.sqrt(V[j + termNames.size() * i][j + termNames.size() * i]),
+								// there's no upper tail t distribution in Java. Instead, subtract from 1.
+								2 * (1 - t.cumulativeProbability(Math.abs(coefs[j][i] / Math.sqrt(V[j + termNames.size()
+										* i][j + termNames.size() * i]))))));
+					}
 				}
 				termsMap.put(eqLabel, terms);
 			}
