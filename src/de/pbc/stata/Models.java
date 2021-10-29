@@ -147,6 +147,10 @@ public class Models {
 						return List.of("select", getDv().getLabel());
 					}
 					
+					public List<ModelStat> getEquationStats(String eq) {
+						return List.of();
+					};
+					
 				};
 			default:
 				return new StandardResult() {
