@@ -113,6 +113,8 @@ public class Models {
 			case "heckman":
 				return new StandardResult(true) {
 					
+					private Map<String, List<ModelStat>> equationStats;
+					
 					@Override
 					public List<ModelStat> getModelStats() {
 						return List.of(new ModelStat("chi2", "p", "Wald χ²"), new ModelStat("lambda", null, "λ") {
@@ -139,7 +141,7 @@ public class Models {
 										: "");
 							}
 							
-						}, new ModelStat("rho", "p_c", "ρ"), new ModelStat("N", null, "N", 0));
+						}, new ModelStat("rho", "p_c", "ρ"));
 					}
 					
 					@Override
@@ -148,7 +150,12 @@ public class Models {
 					}
 					
 					public List<ModelStat> getEquationStats(String eq) {
-						return List.of();
+						if (Objects.isNull(equationStats)) {
+							equationStats = new HashMap<>(getEquations().size());
+							equationStats.put("select", List.of(new ModelStat("N", null, "N", 0)));
+							equationStats.put(getDv().getLabel(), List.of(new ModelStat("N_selected", null, "N", 0)));
+						}
+						return equationStats.get(eq);
 					};
 					
 				};
