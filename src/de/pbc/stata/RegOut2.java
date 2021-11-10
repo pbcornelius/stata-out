@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
@@ -64,6 +65,9 @@ public class RegOut2 {
 	public int execute(String[] args) {
 		if (Macro.getGlobal("cmd", Macro.TYPE_ERETURN) == null)
 			throw new RuntimeException("no estimation stored");
+		
+		// otherwise the Excel file sometimes triggers an error: "Zip bomb detected!"
+		ZipSecureFile.setMinInflateRatio(.0001);
 		
 		List<String> argsList = Arrays.asList(args).stream().map((s) -> s.toLowerCase()).collect(Collectors.toList());
 		
