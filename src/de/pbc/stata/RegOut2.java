@@ -19,7 +19,9 @@ import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.Name;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.ss.util.WorkbookUtil;
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
@@ -54,6 +56,8 @@ public class RegOut2 {
 	
 	private XSSFWorkbook wb;
 	
+	private boolean hideOmitted, hideBase;
+	
 	// ENTRY POINT --------------------------------------------------- //
 	
 	public static int start(String[] args) throws Exception {
@@ -72,6 +76,8 @@ public class RegOut2 {
 		List<String> argsList = Arrays.asList(args).stream().map((s) -> s.toLowerCase()).collect(Collectors.toList());
 		
 		boolean merge = argsList.contains("m") || argsList.contains("merge");
+		hideOmitted = argsList.contains("hideomitted");
+		hideBase = argsList.contains("hidebase");
 		cmd = Macro.getGlobal("cmd", Macro.TYPE_ERETURN);
 		regPar = Models.byCmd(cmd);
 		
@@ -177,23 +183,49 @@ public class RegOut2 {
 		XSSFCellStyle csText = wb.createCellStyle();
 		csText.setAlignment(HorizontalAlignment.RIGHT);
 		
-		int row = 0;
-		XSSFRow r = sh.getRow(row);
+		XSSFRow r = sh.getRow(0);
 		XSSFCell c = r.getCell(col);
-		
 		c.setCellValue(modelTitle);
+		
+		Name lastVarName = wb.getName(String.format("%s_lastvar", sh.getSheetName().replace('-', '_')));
+		int row;
+		if (Objects.nonNull(lastVarName)) {
+			CellReference lastVarCR = new CellReference(lastVarName.getRefersToFormula());
+			row = lastVarCR.getRow();
+		} else {
+			row = 0;
+		}
 		
 		Iterator<Term> termsItr = terms.iterator();
 		while (termsItr.hasNext()) {
 			Term term = termsItr.next();
 			
-			if (rows.containsKey(term.getLabel())) {
+			if (!term.isConstant()) {
 				termsItr.remove();
 				
-				int termRow = rows.get(term.getLabel());
-				if (!term.getName().equals("_cons"))
-					row = Math.max(termRow, row);
-				r = sh.getRow(termRow);
+				if ((hideOmitted && term.isOmitted()) || (hideBase && term.isBase())) {
+					continue;
+				}
+				
+				if (rows.containsKey(term.getLabel())) {
+					r = sh.getRow(rows.get(term.getLabel()));
+					c = r.getCell(col);
+				} else {
+					row++;
+					r = sh.getRow(row) != null ? sh.getRow(row) : sh.createRow(row);
+					
+					c = r.getCell(0);
+					if (c.getCellType().equals(CellType.BLANK)) {
+						c.setCellValue(term.getLabel());
+					} else {
+						int tmpRow = row;
+						rows.replaceAll((s, i) -> i >= tmpRow ? i + 1 : i);
+						sh.shiftRows(row, sh.getLastRowNum(), 1);
+						r = sh.createRow(row);
+						c = r.getCell(0);
+						c.setCellValue(term.getLabel());
+					}
+				}
 				
 				c = r.getCell(col);
 				if (term.isOmitted()) {
@@ -206,27 +238,41 @@ public class RegOut2 {
 			}
 		}
 		
+		if (Objects.nonNull(lastVarName)) {
+			CellReference lastVarCR = new CellReference(lastVarName.getRefersToFormula());
+			lastVarName.setRefersToFormula(String.format("%s",
+					new CellReference(sh.getSheetName(), Math.max(row, lastVarCR.getRow()), 0, true, true)
+							.formatAsString()));
+		} else {
+			lastVarName = wb.createName();
+			lastVarName.setNameName(String.format("%s_lastvar", sh.getSheetName().replace('-', '_')));
+			lastVarName.setRefersToFormula(String.format("%s",
+					new CellReference(sh.getSheetName(), row, 0, true, true).formatAsString()));
+		}
+		
+		// constant
 		for (Term term : terms) {
-			row++;
-			r = sh.getRow(row) != null ? sh.getRow(row) : sh.createRow(row);
-			
-			c = r.getCell(0);
-			if (c.getCellType().equals(CellType.BLANK)) {
-				c.setCellValue(term.getLabel());
-			} else {
-				int tmpRow = row;
-				rows.replaceAll((s, i) -> i >= tmpRow ? i + 1 : i);
-				sh.shiftRows(row, sh.getLastRowNum(), 1);
-				r = sh.createRow(row);
-				c = r.getCell(0);
-				c.setCellValue(term.getLabel());
-			}
-			
-			if (term.isOmitted()) {
+			if (rows.containsKey(term.getLabel())) {
+				r = sh.getRow(rows.get(term.getLabel()));
 				c = r.getCell(col);
-				c.setCellValue("0 (omitted)");
+				c.setCellValue(term.getCoefficient(2) + term.getSigStars() + " (" + term.getStandardError(2) + ")");
 				c.setCellStyle(csText);
-			} else if (!term.isBase()) {
+			} else {
+				row++;
+				r = sh.getRow(row) != null ? sh.getRow(row) : sh.createRow(row);
+				
+				c = r.getCell(0);
+				if (c.getCellType().equals(CellType.BLANK)) {
+					c.setCellValue(term.getLabel());
+				} else {
+					int tmpRow = row;
+					rows.replaceAll((s, i) -> i >= tmpRow ? i + 1 : i);
+					sh.shiftRows(row, sh.getLastRowNum(), 1);
+					r = sh.createRow(row);
+					c = r.getCell(0);
+					c.setCellValue(term.getLabel());
+				}
+				
 				c = r.getCell(col);
 				c.setCellValue(term.getCoefficient(2) + term.getSigStars() + " (" + term.getStandardError(2) + ")");
 				c.setCellStyle(csText);

@@ -77,6 +77,10 @@ public class Term {
 		return vars.stream().anyMatch((v) -> v.isBase());
 	}
 	
+	public boolean isConstant() {
+		return getName().equals("_cons");
+	}
+	
 	public String getCoefficient(int scale) {
 		if (Objects.nonNull(coef)) {
 			return StataUtils.correctRounding(coef, scale);
