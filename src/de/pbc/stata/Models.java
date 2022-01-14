@@ -26,7 +26,7 @@ public class Models {
 					
 					@Override
 					public List<ModelStat> getModelStats() {
-						return List.of(new ModelStat("F", null, "F"),
+						return List.of(new ModelStat.FStat("F", "F"),
 								new ModelStat("r2", null, "R²"),
 								new ModelStat("r2_a", null, "R² (adj.)"),
 								new ModelStat("N", null, "N", 0));

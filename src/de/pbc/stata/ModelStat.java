@@ -2,6 +2,8 @@ package de.pbc.stata;
 
 import java.util.Objects;
 
+import org.apache.commons.math3.distribution.FDistribution;
+
 import com.stata.sfi.Data;
 import com.stata.sfi.Scalar;
 
@@ -81,6 +83,22 @@ public class ModelStat {
 	@Override
 	public String toString() {
 		return getVal() + getSigStars();
+	}
+	
+	// INNER CLASSES ------------------------------------------------ //
+	
+	public static class FStat extends ModelStat {
+		
+		// INNER CLASSES -------------------------------------------- //
+		
+		protected FStat(String local, String label) {
+			super(local, null, label);
+			
+			p = 1 - new FDistribution(Scalar.getValue("df_m", Scalar.TYPE_ERETURN),
+					Scalar.getValue("df_r", Scalar.TYPE_ERETURN)).cumulativeProbability(Scalar.getValue(local,
+							Scalar.TYPE_ERETURN));
+		}
+		
 	}
 	
 }
