@@ -34,8 +34,8 @@ import com.stata.sfi.SFIToolkit;
 
 /**
  * <p>
- * Stata Java plugin to write Stata outputs in Excel.
- * More flexible improvement of RegOut.
+ * Stata Java plugin to write Stata outputs in Excel. More flexible improvement
+ * of RegOut.
  * </p>
  * <p>
  * Takes the following arguments:
@@ -47,59 +47,52 @@ import com.stata.sfi.SFIToolkit;
  * </p>
  */
 public class RegOut2 {
-	
+
 	// VARIABLES ----------------------------------------------------- //
-	
+
 	private String cmd;
-	
+
 	private ModelResult regPar;
-	
+
 	private XSSFWorkbook wb;
-	
+
 	private boolean hideOmitted, hideBase;
-	
+
 	// ENTRY POINT --------------------------------------------------- //
-	
+
 	public static int start(String[] args) throws Exception {
 		return new RegOut2().execute(args);
 	}
-	
+
 	// PUBLIC ------------------------------------------------------- //
-	
+
 	public int execute(String[] args) {
 		if (Macro.getGlobal("cmd", Macro.TYPE_ERETURN) == null)
 			throw new RuntimeException("no estimation stored");
-		
+
 		// otherwise the Excel file sometimes triggers an error: "Zip bomb detected!"
 		ZipSecureFile.setMinInflateRatio(.0001);
-		
+
 		List<String> argsList = Arrays.asList(args).stream().map((s) -> s.toLowerCase()).collect(Collectors.toList());
-		
+
 		boolean merge = argsList.contains("m") || argsList.contains("merge");
 		hideOmitted = argsList.contains("hideomitted");
 		hideBase = argsList.contains("hidebase");
 		cmd = Macro.getGlobal("cmd", Macro.TYPE_ERETURN);
 		regPar = Models.byCmd(cmd);
-		
-		Path path = argsList.stream()
-				.filter((a) -> a.startsWith("path="))
-				.findFirst()
-				.map((a) -> Paths.get(a.substring("path=".length())))
-				.orElse(Paths.get("regOut.xlsx"));
-		
-		String sheet = argsList.stream()
-				.filter(a -> a.startsWith("sheet") || a.startsWith("sh"))
-				.findFirst()
-				.map(s -> s.substring(s.indexOf("=") + 1))
-				.orElse(null);
-		
-		try (XSSFWorkbook wb = merge && Files.exists(path)
-				? new XSSFWorkbook(Files.newInputStream(path))
+
+		Path path = Path.of(SFIToolkit.getWorkingDir()).resolve(argsList.stream().filter((a) -> a.startsWith("path="))
+				.findFirst().map((a) -> Paths.get(a.substring("path=".length()))).orElse(Paths.get("regOut.xlsx")));
+
+		String sheet = argsList.stream().filter(a -> a.startsWith("sheet") || a.startsWith("sh")).findFirst()
+				.map(s -> s.substring(s.indexOf("=") + 1)).orElse(null);
+
+		try (XSSFWorkbook wb = merge && Files.exists(path) ? new XSSFWorkbook(Files.newInputStream(path))
 				: new XSSFWorkbook()) {
 			this.wb = wb;
-			
+
 			wb.setMissingCellPolicy(Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
-			
+
 			XSSFSheet sh;
 			if (Objects.isNull(sheet)) {
 				sh = Optional.ofNullable(wb.getSheet("Sheet0")).orElseGet(() -> wb.createSheet());
@@ -111,7 +104,7 @@ public class RegOut2 {
 			}
 			wb.setActiveSheet(wb.getSheetIndex(sh));
 			wb.setSelectedTab(wb.getSheetIndex(sh));
-			
+
 			if (regPar.hasMultipleEquations()) {
 				for (String eq : regPar.getEquations()) {
 					addModel(sh, regPar.getTerms(eq), String.format("%s (%s)", regPar.getDv(), eq), eq);
@@ -119,23 +112,23 @@ public class RegOut2 {
 			} else {
 				addModel(sh, regPar.getTerms(), regPar.getDv().getLabel(), null);
 			}
-			
+
 			try (FileOutputStream out = new FileOutputStream(path.toFile())) {
 				wb.write(out);
 			}
-			
+
 			SFIToolkit.display("{browse \"" + path + "\":Open " + path + "}" + "\n");
 			Macro.setGlobal("filename", "path=" + path.toString());
-			
+
 			return 0;
 		} catch (Exception e) {
 			SFIToolkit.error(SFIToolkit.stackTraceToString(e));
 			return 45;
 		}
 	}
-	
+
 	// PRIVATE ------------------------------------------------------ //
-	
+
 	private String iterateSheetName(String name, int i) {
 		String tmpName = name + i;
 		if (wb.getSheet(tmpName) == null)
@@ -143,14 +136,14 @@ public class RegOut2 {
 		else
 			return iterateSheetName(name, i + 1);
 	}
-	
+
 	private void addModel(XSSFSheet sh, List<Term> terms, String modelTitle, String eq) {
 		XSSFRow r = Optional.ofNullable(sh.getRow(0)).orElseGet(() -> sh.createRow(0));
-		
+
 		XSSFCell c = r.getCell(0);
 		if (c.getCellType().equals(CellType.BLANK))
 			c.setCellValue("Variables");
-		
+
 		Map<String, Integer> rows = new HashMap<>();
 		for (int row = 1; row <= sh.getLastRowNum(); row++) {
 			r = sh.getRow(row);
@@ -158,7 +151,7 @@ public class RegOut2 {
 			if (!c.getCellType().equals(CellType.BLANK))
 				rows.put(c.getStringCellValue(), row);
 		}
-		
+
 		r = sh.getRow(0);
 		for (int col = 1; col < 1001; col++) {
 			c = r.getCell(col);
@@ -168,25 +161,25 @@ public class RegOut2 {
 			}
 		}
 	}
-	
+
 	private void fillModel(XSSFSheet sh, int col, Map<String, Integer> rows, List<Term> terms, String modelTitle,
 			String eq) {
 		CellStyle cs0d = wb.createCellStyle();
 		cs0d.setDataFormat(wb.createDataFormat().getFormat("#,##0"));
-		
+
 		CellStyle cs2d = wb.createCellStyle();
 		cs2d.setDataFormat(wb.createDataFormat().getFormat("#,##0.00"));
-		
+
 		CellStyle cs3d = wb.createCellStyle();
 		cs3d.setDataFormat(wb.createDataFormat().getFormat("0.000"));
-		
+
 		XSSFCellStyle csText = wb.createCellStyle();
 		csText.setAlignment(HorizontalAlignment.RIGHT);
-		
+
 		XSSFRow r = sh.getRow(0);
 		XSSFCell c = r.getCell(col);
 		c.setCellValue(modelTitle);
-		
+
 		Name lastVarName = wb.getName(String.format("%s_lastvar", sh.getSheetName().replace('-', '_')));
 		int row;
 		if (Objects.nonNull(lastVarName)) {
@@ -195,25 +188,25 @@ public class RegOut2 {
 		} else {
 			row = 0;
 		}
-		
+
 		Iterator<Term> termsItr = terms.iterator();
 		while (termsItr.hasNext()) {
 			Term term = termsItr.next();
-			
+
 			if (!term.isConstant()) {
 				termsItr.remove();
-				
+
 				if ((hideOmitted && term.isOmitted()) || (hideBase && term.isBase())) {
 					continue;
 				}
-				
+
 				if (rows.containsKey(term.getLabel())) {
 					r = sh.getRow(rows.get(term.getLabel()));
 					c = r.getCell(col);
 				} else {
 					row++;
 					r = sh.getRow(row) != null ? sh.getRow(row) : sh.createRow(row);
-					
+
 					c = r.getCell(0);
 					if (c.getCellType().equals(CellType.BLANK)) {
 						c.setCellValue(term.getLabel());
@@ -226,7 +219,7 @@ public class RegOut2 {
 						c.setCellValue(term.getLabel());
 					}
 				}
-				
+
 				c = r.getCell(col);
 				if (term.isOmitted()) {
 					c.setCellValue("0 (omitted)");
@@ -237,7 +230,7 @@ public class RegOut2 {
 				}
 			}
 		}
-		
+
 		if (Objects.nonNull(lastVarName)) {
 			CellReference lastVarCR = new CellReference(lastVarName.getRefersToFormula());
 			lastVarName.setRefersToFormula(String.format("%s",
@@ -246,10 +239,10 @@ public class RegOut2 {
 		} else {
 			lastVarName = wb.createName();
 			lastVarName.setNameName(String.format("%s_lastvar", sh.getSheetName().replace('-', '_')));
-			lastVarName.setRefersToFormula(String.format("%s",
-					new CellReference(sh.getSheetName(), row, 0, true, true).formatAsString()));
+			lastVarName.setRefersToFormula(
+					String.format("%s", new CellReference(sh.getSheetName(), row, 0, true, true).formatAsString()));
 		}
-		
+
 		// constant
 		for (Term term : terms) {
 			if (rows.containsKey(term.getLabel())) {
@@ -260,7 +253,7 @@ public class RegOut2 {
 			} else {
 				row++;
 				r = sh.getRow(row) != null ? sh.getRow(row) : sh.createRow(row);
-				
+
 				c = r.getCell(0);
 				if (c.getCellType().equals(CellType.BLANK)) {
 					c.setCellValue(term.getLabel());
@@ -272,16 +265,16 @@ public class RegOut2 {
 					c = r.getCell(0);
 					c.setCellValue(term.getLabel());
 				}
-				
+
 				c = r.getCell(col);
 				c.setCellValue(term.getCoefficient(2) + term.getSigStars() + " (" + term.getStandardError(2) + ")");
 				c.setCellStyle(csText);
 			}
 		}
-		
+
 		row = sh.getLastRowNum();
 		int tmpRow;
-		
+
 		if (Objects.nonNull(eq)) {
 			for (ModelStat stat : regPar.getEquationStats(eq)) {
 				tmpRow = rows.containsKey(stat.getLabel()) ? rows.get(stat.getLabel()) : ++row;
@@ -294,7 +287,7 @@ public class RegOut2 {
 				c.setCellStyle(csText);
 			}
 		}
-		
+
 		for (ModelStat stat : regPar.getModelStats()) {
 			tmpRow = rows.containsKey(stat.getLabel()) ? rows.get(stat.getLabel()) : ++row;
 			r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
@@ -305,7 +298,7 @@ public class RegOut2 {
 			c.setCellValue(stat.toString());
 			c.setCellStyle(csText);
 		}
-		
+
 		tmpRow = rows.containsKey("created") ? rows.get("created") : ++row;
 		r = sh.getRow(tmpRow) != null ? sh.getRow(tmpRow) : sh.createRow(tmpRow);
 		c = r.getCell(0);
@@ -313,9 +306,9 @@ public class RegOut2 {
 			c.setCellValue("created");
 		c = r.getCell(col);
 		c.setCellValue(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-		
+
 		sh.autoSizeColumn(0);
 		sh.autoSizeColumn(col);
 	}
-	
+
 }
