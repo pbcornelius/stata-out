@@ -59,8 +59,23 @@ public class Models {
 
 				@Override
 				public List<ModelStat> getModelStats() {
-					return List.of(new ModelStat.FStat("F", "F"), new ModelStat("r2", null, "R²"),
-							new ModelStat("r2_a", null, "R² (adj.)"), new ModelStat("N", null, "N", 0));
+					List<ModelStat> modelStats = new ArrayList<>();
+
+					modelStats.add(new ModelStat.FStat("F", "F"));
+					modelStats.add(new ModelStat("r2", null, "R²"));
+					modelStats.add(new ModelStat("r2_a", null, "R² (adj.)"));
+
+					double[][] dof = StataUtils.getMatrix("e(dof_table)");
+					String[] dofRows = Matrix.getMatrixRowNames("e(dof_table)");
+					for (int row = 0; row < dof.length; row++) {
+						Variable dofVar = new Variable(dofRows[row].replace("1.", ""));
+						modelStats.add(new ModelStat(dofVar.getLabel(), String.format("N (%s)", dofVar.getLabel()),
+								dof[row][0], null, 0));
+					}
+
+					modelStats.add(new ModelStat("N", null, "N", 0));
+
+					return modelStats;
 				}
 
 			};
@@ -335,6 +350,14 @@ public class Models {
 			eqTerms.put(getDv().getName(), terms);
 
 			// model stats
+
+			double[][] dof = StataUtils.getMatrix("e(dof_table)");
+			String[] dofRows = Matrix.getMatrixRowNames("e(dof_table)");
+			for (int row = 0; row < dof.length; row++) {
+				Variable dofVar = new Variable(dofRows[row].replace("1.", ""));
+				modelStats.add(new ModelStat(dofVar.getLabel(), String.format("N (%s)", dofVar.getLabel()), dof[row][0],
+						null, 0));
+			}
 
 			modelStats.add(new ModelStat("N", null, "N", 0));
 
