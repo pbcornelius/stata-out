@@ -13,6 +13,7 @@ import org.apache.commons.math3.distribution.TDistribution;
 import com.stata.sfi.Data;
 import com.stata.sfi.Macro;
 import com.stata.sfi.Matrix;
+import com.stata.sfi.SFIToolkit;
 import com.stata.sfi.Scalar;
 
 public class Models {
@@ -63,6 +64,8 @@ public class Models {
 				}
 
 			};
+		case "ivreghdfe":
+			return new Ivreghdfe();
 		case "logit":
 			return new StandardResult() {
 
@@ -278,6 +281,133 @@ public class Models {
 			return equationStats.get(eq);
 		}
 
+	}
+
+	protected static class Ivreghdfe implements ModelResult {
+
+		// VARIABLES ------------------------------------------------ //
+
+		protected Variable dv;
+
+		protected List<String> eqs;
+
+		protected Map<String, List<Term>> eqTerms = new HashMap<>();
+
+		protected List<ModelStat> modelStats = new ArrayList<>();
+
+		protected Map<String, List<ModelStat>> eqStats = new HashMap<>();
+
+		// CONSTRUCTOR ---------------------------------------------- //
+
+		protected Ivreghdfe() {
+			this.dv = new Variable(Macro.getGlobal("depvar", Macro.TYPE_ERETURN));
+			this.eqs = new ArrayList<>(Arrays.asList(Macro.getGlobal("instd", Macro.TYPE_ERETURN).split(" ")));
+			this.eqs.add(getDv().getName());
+
+			// 2nd stage
+
+			stage2();
+
+			for (String eq : eqs.stream().filter(eq -> !eq.equals(getDv().getName())).toList()) {
+				stage1Stats(eq);
+			}
+
+			for (String eq : eqs.stream().filter(eq -> !eq.equals(getDv().getName())).toList()) {
+				stage1Coefs(eq);
+			}
+		}
+
+		// PRIVATE -------------------------------------------------- //
+
+		private void stage2() {
+			// coefs
+
+			double[] b = StataUtils.getMatrix("e(b)")[0];
+			double[][] V = StataUtils.getMatrix("e(V)");
+			String[] cols = Matrix.getMatrixColNames("e(b)");
+			TDistribution t = new TDistribution(Scalar.getValue("df_r", Scalar.TYPE_ERETURN));
+			List<Term> terms = new ArrayList<>(cols.length);
+			for (int col = 0; col < cols.length; col++) {
+				terms.add(new Term(col, cols[col], b[col], Math.sqrt(V[col][col]),
+						// there's no upper tail t distribution in Java; instead, subtract from 1.
+						2 * (1 - t.cumulativeProbability(Math.abs(b[col] / Math.sqrt(V[col][col]))))));
+			}
+			eqTerms.put(getDv().getName(), terms);
+
+			// model stats
+
+			modelStats.add(new ModelStat("N", null, "N", 0));
+
+			// equation stats
+
+			eqStats.put(getDv().getName(), List.of(new ModelStat("F", "Fp", "F"), new ModelStat("r2", null, "R²"),
+					new ModelStat("r2_a", null, "R² (adj.)")));
+		}
+
+		private void stage1Stats(String eq) {
+			double[] eqStat = StataUtils.transposeMatrix(StataUtils.getMatrix("e(first)"))[Arrays
+					.asList(Matrix.getMatrixColNames("e(first)")).indexOf(eq)];
+			List<String> eqStatRows = Arrays.asList(Matrix.getMatrixRowNames("e(first)"));
+
+			eqStats.put(eq,
+					List.of(new ModelStat("F", "F", eqStat[eqStatRows.indexOf("F")],
+							eqStat[eqStatRows.indexOf("pvalue")]),
+							new ModelStat("pr2", "R²", eqStat[eqStatRows.indexOf("pr2")], null)));
+		}
+
+		private void stage1Coefs(String eq) {
+			// this call removes e(first), so stage 1 stats have to be collected beforehand
+			SFIToolkit.executeCommand(String.format("quietly: estimates restore _ivreg2_%s", eq), false);
+
+			double[] b = StataUtils.getMatrix("e(b)")[0];
+			double[][] V = StataUtils.getMatrix("e(V)");
+			String[] cols = Matrix.getMatrixColNames("e(b)");
+			TDistribution t = new TDistribution(Scalar.getValue("df_r", Scalar.TYPE_ERETURN));
+			List<Term> terms = new ArrayList<>(cols.length);
+			for (int col = 0; col < cols.length; col++) {
+				terms.add(new Term(col, cols[col], b[col], Math.sqrt(V[col][col]),
+						// there's no upper tail t distribution in Java; instead, subtract from 1.
+						2 * (1 - t.cumulativeProbability(Math.abs(b[col] / Math.sqrt(V[col][col]))))));
+			}
+			eqTerms.put(eq, terms);
+		}
+
+		// PUBLIC --------------------------------------------------- //
+
+		@Override
+		public Variable getDv() {
+			return dv;
+		}
+
+		@Override
+		public boolean hasMultipleEquations() {
+			return true;
+		}
+
+		@Override
+		public List<String> getEquations() {
+			return eqs;
+		}
+
+		@Override
+		public List<Term> getTerms() {
+			return eqTerms.get(getDv().getName());
+		}
+
+		@Override
+		public List<Term> getTerms(String eq) {
+			return eqTerms.get(eq);
+		}
+
+		@Override
+		public List<ModelStat> getModelStats() {
+			return modelStats;
+		}
+
+		@Override
+		public List<ModelStat> getEquationStats(String eq) {
+			return eqStats.get(eq);
+		}
 	}
 
 }
