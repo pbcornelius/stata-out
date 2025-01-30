@@ -363,6 +363,8 @@ public class Models {
 
 			// equation stats
 
+			// TODO probably shouldn't report R2 in 2SLS/IV
+			// https://www.stata.com/support/faqs/statistics/two-stage-least-squares/
 			eqStats.put(getDv().getName(), List.of(new ModelStat("F", "Fp", "F"), new ModelStat("r2", null, "R²"),
 					new ModelStat("r2_a", null, "R² (adj.)")));
 		}
@@ -372,6 +374,9 @@ public class Models {
 					.asList(Matrix.getMatrixColNames("e(first)")).indexOf(eq)];
 			List<String> eqStatRows = Arrays.asList(Matrix.getMatrixRowNames("e(first)"));
 
+			// "simple F and partial R-squared statistics [parameters F and pr2] for each of
+			// the first-stage equations, with no adjustments if there is more than one
+			// endogenous regressor" (ivreg2 documentation)
 			eqStats.put(eq,
 					List.of(new ModelStat("F", "F", eqStat[eqStatRows.indexOf("F")],
 							eqStat[eqStatRows.indexOf("pvalue")]),
