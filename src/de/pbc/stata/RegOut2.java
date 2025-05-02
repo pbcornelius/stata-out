@@ -118,7 +118,6 @@ public class RegOut2 {
 			}
 
 			SFIToolkit.display("{browse \"" + path + "\":Open " + path + "}" + "\n");
-			Macro.setGlobal("filename", "path=" + path.toString());
 
 			return 0;
 		} catch (Exception e) {
