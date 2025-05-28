@@ -4,7 +4,7 @@ import java.util.Objects;
 
 import org.apache.commons.math3.distribution.FDistribution;
 
-import com.stata.sfi.Data;
+import com.stata.sfi.Missing;
 import com.stata.sfi.Scalar;
 
 public class ModelStat {
@@ -48,12 +48,12 @@ public class ModelStat {
 
 	protected void getValues() {
 		val = Scalar.getValue(local, Scalar.TYPE_ERETURN);
-		val = Data.isValueMissing(val) ? null : val;
+		val = Missing.isMissing(val) ? null : val;
 
 		if (Objects.nonNull(localP)) {
 			p = Scalar.getValue(localP, Scalar.TYPE_ERETURN);
 			if (Objects.nonNull(p)) {
-				p = Data.isValueMissing(p) ? null : p;
+				p = Missing.isMissing(p) ? null : p;
 			}
 		}
 	}

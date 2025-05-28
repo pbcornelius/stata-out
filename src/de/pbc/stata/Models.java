@@ -10,9 +10,9 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.math3.distribution.TDistribution;
 
-import com.stata.sfi.Data;
 import com.stata.sfi.Macro;
 import com.stata.sfi.Matrix;
+import com.stata.sfi.Missing;
 import com.stata.sfi.SFIToolkit;
 import com.stata.sfi.Scalar;
 
@@ -146,13 +146,13 @@ public class Models {
 						protected void getValues() {
 							// the last value in the regression is lambda
 							val = resultsTable[0][termNames.size() - 1];
-							val = Data.isValueMissing(val) ? null : val;
+							val = Missing.isMissing(val) ? null : val;
 
 							se = resultsTable[1][termNames.size() - 1];
-							se = Data.isValueMissing(se) ? null : se;
+							se = Missing.isMissing(se) ? null : se;
 
 							p = resultsTable[3][termNames.size() - 1];
-							p = Data.isValueMissing(p) ? null : p;
+							p = Missing.isMissing(p) ? null : p;
 						}
 
 						@Override
@@ -178,6 +178,16 @@ public class Models {
 					}
 					return equationStats.get(eq);
 				};
+
+			};
+		case "xtlogit":
+			return new StandardResult() {
+
+				@Override
+				public List<ModelStat> getModelStats() {
+					return List.of(new ModelStat("N", null, "N", 0), new ModelStat("N_g", null, "Groups", 0),
+							new ModelStat("chi2", "p", "Wald χ²", 2));
+				}
 
 			};
 		default:

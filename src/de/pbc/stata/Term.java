@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.stata.sfi.Data;
+import com.stata.sfi.Missing;
 
 public class Term {
 
@@ -39,8 +39,8 @@ public class Term {
 		this.index = index;
 		this.name = name.trim();
 		vars = Arrays.stream(this.name.split("#")).map(Variable::new).collect(Collectors.toList());
-		this.coef = Objects.isNull(coef) || Data.isValueMissing(coef) ? null : coef;
-		this.se = Objects.isNull(se) || Data.isValueMissing(se) ? null : se;
+		this.coef = Objects.isNull(coef) || Missing.isMissing(coef) ? null : coef;
+		this.se = Objects.isNull(se) || Missing.isMissing(se) ? null : se;
 		this.p = p;
 	}
 
